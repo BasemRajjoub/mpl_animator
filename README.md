@@ -1,12 +1,14 @@
 # mpl-animator
 
-Turn any static matplotlib script into an animated GIF by sweeping a variable - no rewriting required.
+Turn any static matplotlib script into an animated GIF or MP4 by sweeping a variable - no rewriting required.
 
 ## Features
 
 - **Zero boilerplate** - point it at an existing script, it figures out the rest
 - **AST-based dependency tracking** - automatically identifies which variables and calculations need to update each frame
 - **Parallel rendering** - renders frames across all CPU cores via `multiprocessing`, falls back to sequential automatically
+- **GIF and MP4 output** - export as animated GIF (Pillow) or MP4 (ffmpeg); just add `--format mp4`
+- **Axis rotation** - animate `azim` with `ax.view_init` to rotate 3D plots; animate `angle` with `ax.set_theta_offset` to spin polar plots
 - **Math expressions in ranges** - `--range "0,2*pi"` just works
 - **2D, 3D, and polar plots** - handles `plot_surface`, `scatter3D`, subplots, polar axes, and more
 - **Single-file, standalone** - `mpl_animator.py` can be dropped into any project with no install required; only depends on `matplotlib`, `numpy`, and `Pillow` (no exotic dependencies)
@@ -30,11 +32,17 @@ python mpl_animator.py my_plot.py --var t --range "0,1"
 If installed via pip, use the `mpl-animator` command. If using the file directly, replace `mpl-animator` with `python mpl_animator.py` - everything else is identical.
 
 ```bash
-# Basic: animate variable `f` from 3 to 60
+# Basic: animate variable `f` from 3 to 60 (outputs GIF by default)
 mpl-animator wave_static.py --var f --range "3,60"
+
+# Export as MP4 instead of GIF (requires ffmpeg)
+mpl-animator plot.py --var t --range "0,2*pi" --format mp4
 
 # Math expressions in range, custom frame count and FPS
 mpl-animator plot.py --var t --range "0,2*pi" --frames 60 --fps 30
+
+# Rotate a 3D plot by animating the camera azimuth
+mpl-animator my_3d_plot.py --var azim --range "0,360" --frames 72 --fps 20
 
 # Control output quality and parallelism
 mpl-animator plot.py --var alpha --range "0,1" --dpi 150 --workers 8
@@ -43,7 +51,7 @@ mpl-animator plot.py --var alpha --range "0,1" --dpi 150 --workers 8
 mpl-animator plot.py --var t --range "0,1" --out my_animation.gif
 ```
 
-This generates a `<script>_animated.py` file. Run it to produce the GIF:
+This generates a `<script>_animated.py` file. Run it to produce the output:
 
 ```bash
 python wave_static_animated.py              # parallel (default)
@@ -123,7 +131,7 @@ For 3D plots the animator calls `fig.clear()` and recreates the axes each frame 
 
 1. Parses your script's AST to find which variables depend on the animated one
 2. Splits code into **static** (run once) and **dynamic** (recalculated per frame)
-3. Generates a new script with `FuncAnimation` (sequential) and `multiprocessing` (parallel) renderers
+3. Generates a new script with `FuncAnimation` (sequential 2D GIF), PNG+stitch (sequential MP4 or 3D), and `multiprocessing` (parallel) renderers
 
 ## Library usage
 
@@ -133,6 +141,9 @@ from mpl_animator import animate
 src = open("my_plot.py").read()
 animated_code = animate(src, var="t", range_str="0,6.28", frames=60, fps=25)
 open("my_plot_animated.py", "w").write(animated_code)
+
+# Export as MP4
+animated_code = animate(src, var="t", range_str="0,6.28", fmt="mp4")
 ```
 
 ## Supported plot types
@@ -142,8 +153,8 @@ open("my_plot_animated.py", "w").write(animated_code)
 ## Tests
 
 ```bash
-pytest tests/ -v              # fast tests (111)
-pytest tests/ -v -m slow      # slow tests that generate actual GIFs
+pytest tests/ -v              # fast tests
+pytest tests/ -v -m slow      # slow tests that generate actual GIFs/MP4s
 ```
 
 ---

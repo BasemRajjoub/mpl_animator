@@ -2,17 +2,17 @@
 mpl_animator.py -- convert ANY static matplotlib script to an animation.
 Author: Basem Rajjoub (https://basemrajjoub.com)
 Version: 0.1.1
-Uses only matplotlib + multiprocessing + Pillow.
+Uses only matplotlib + multiprocessing + Pillow (GIF) / ffmpeg (MP4).
 
 Usage (CLI):
     python mpl_animator.py plot.py --var f --range "3,60"
     python mpl_animator.py plot.py --var t --range "0,2*pi" --frames 120 --fps 30
-    python mpl_animator.py plot.py --var alpha --range "0,1" --workers 8
+    python mpl_animator.py plot.py --var alpha --range "0,1" --format mp4
     (run generated script with --sequential to skip parallel)
 
 Usage (library):
     from mpl_animator import animate
-    code = animate(open("plot.py").read(), var="f", range_str="3,60")
+    code = animate(open("plot.py").read(), var="f", range_str="3,60", fmt="mp4")
 """
 
 import ast
@@ -395,28 +395,53 @@ TEMPLATE = '''\
 """
 <<<STATIC>>>
 import matplotlib.animation as animation
-import multiprocessing, os, tempfile, shutil, time
-from PIL import Image
+import multiprocessing, os, subprocess, tempfile, shutil, time
+<<<PIL_IMPORT>>>
 
 # -- frame update ----------------------------------------------------
 def update(_frame):
 <<<UPDATE_BODY>>>
 
-# -- shared GIF stitching --------------------------------------------
+# -- output helpers --------------------------------------------------
 def _stitch_gif(png_paths, out_gif, interval):
     """Save a list of PNG paths as an animated GIF."""
+    from PIL import Image
     imgs = [Image.open(p).convert("RGBA") for p in png_paths]
     imgs[0].save(out_gif, save_all=True, append_images=imgs[1:],
                  loop=0, duration=interval, optimize=False)
 
+def _encode_mp4(png_dir, out_mp4, fps):
+    """Encode sorted PNGs in png_dir to MP4 using ffmpeg."""
+    cmd = [
+        "ffmpeg", "-y",
+        "-framerate", str(fps),
+        "-i", os.path.join(png_dir, "frame_%05d.png"),
+        "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",  # libx264 requires even dimensions
+        "-vcodec", "libx264",
+        "-pix_fmt", "yuv420p",
+        "-crf", "18",
+        out_mp4,
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise RuntimeError(f"ffmpeg failed:\\n{result.stderr}")
+
+def _save_output(png_paths, out_file, fps, interval):
+    """Stitch PNGs to GIF or MP4 based on output file extension."""
+    if out_file.endswith(".mp4"):
+        png_dir = os.path.dirname(png_paths[0])
+        _encode_mp4(png_dir, out_file, fps)
+    else:
+        _stitch_gif(png_paths, out_file, interval)
+
 # -- sequential renderer ---------------------------------------------
-# 3D plots recreate fig/ax each frame, so FuncAnimation (which holds a
-# reference to the original fig) produces blank frames. Instead we render
-# each frame to a PNG and stitch, matching what the parallel renderer does.
 _HAS_3D = <<<HAS_3D>>>
+_OUT_FILE = "<<<OUTFILE>>>"
+_FPS = <<<FPS>>>
+_INTERVAL = <<<INTERVAL>>>
 
 def render_sequential():
-    if _HAS_3D:
+    if _HAS_3D or _OUT_FILE.endswith(".mp4"):
         tmpdir = tempfile.mkdtemp(prefix="anim_")
         try:
             paths = []
@@ -424,17 +449,20 @@ def render_sequential():
                 update(_i)
                 _path = os.path.join(tmpdir, f"frame_{_i:05d}.png")
                 plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
-                plt.close("all")
+                if _HAS_3D:
+                    plt.close("all")
                 paths.append(_path)
-            _stitch_gif(paths, "<<<OUTGIF>>>", <<<INTERVAL>>>)
-            print("  Saved ->", "<<<OUTGIF>>>")
+            if not _HAS_3D:
+                plt.close("all")
+            _save_output(paths, _OUT_FILE, _FPS, _INTERVAL)
+            print("  Saved ->", _OUT_FILE)
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
     else:
         ani = animation.FuncAnimation(
-            fig, update, frames=<<<FRAMES>>>, interval=<<<INTERVAL>>>, blit=False)
-        ani.save("<<<OUTGIF>>>", writer="pillow", fps=<<<FPS>>>)
-        print("  Saved ->", "<<<OUTGIF>>>")
+            fig, update, frames=<<<FRAMES>>>, interval=_INTERVAL, blit=False)
+        ani.save(_OUT_FILE, writer="pillow", fps=_FPS)
+        print("  Saved ->", _OUT_FILE)
 
 # -- parallel worker (one PNG per frame) -----------------------------
 def _render_one(job):
@@ -455,8 +483,8 @@ def render_parallel(n_workers):
             paths = list(pool.imap(_render_one, jobs, chunksize=chunk))
         paths.sort()
         print(f"  Stitching {len(paths)} frames...")
-        _stitch_gif(paths, "<<<OUTGIF>>>", <<<INTERVAL>>>)
-        print("  Saved ->", "<<<OUTGIF>>>")
+        _save_output(paths, _OUT_FILE, _FPS, _INTERVAL)
+        print("  Saved ->", _OUT_FILE)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -481,7 +509,7 @@ if __name__ == "__main__":
 
 # -- Main animate function --
 def animate(src, var="t", range_str="0,1", frames=120, fps=25,
-            workers=0, dpi=100, out=None, source_name="<script>"):
+            workers=0, dpi=100, out=None, fmt="gif", source_name="<script>"):
     """Convert a static matplotlib script source to an animated script.
 
     Args:
@@ -492,7 +520,9 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         fps: Frames per second.
         workers: Parallel workers (0 = auto = cpu_count).
         dpi: DPI for rendered frames.
-        out: Output GIF filename (None = auto from source_name).
+        out: Output filename (None = auto from source_name). Extension
+             overrides fmt if provided.
+        fmt: Output format: "gif" (default) or "mp4" (requires ffmpeg).
         source_name: Name of the source script (for messages/docstring).
 
     Returns:
@@ -510,6 +540,7 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     assert frames > 0, f"frames must be positive, got {frames}"
     assert fps > 0, f"fps must be positive, got {fps}"
     assert dpi > 0, f"dpi must be positive, got {dpi}"
+    assert fmt in ("gif", "mp4"), f"fmt must be 'gif' or 'mp4', got {fmt!r}"
 
     # Parse range -- strip whitespace so "0, 2*pi" works as well as "0,2*pi"
     parts = range_str.split(",")
@@ -521,7 +552,16 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         f"Range start and end must differ, got {start_val}"
 
     step = (end_val - start_val) / frames
-    out_gif = out or (Path(source_name).stem + "_animated.gif")
+    # Determine output filename: explicit --out overrides, otherwise auto from fmt
+    if out:
+        out_file = out
+        # Infer fmt from explicit extension if given
+        if out_file.endswith(".mp4"):
+            fmt = "mp4"
+        elif out_file.endswith(".gif"):
+            fmt = "gif"
+    else:
+        out_file = Path(source_name).stem + f"_animated.{fmt}"
     interval = 1000 // fps  # ms per frame
 
     # -- Phase 1: AST scan --
@@ -622,10 +662,11 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         .replace("<<<FRAMES>>>",      str(frames))
         .replace("<<<INTERVAL>>>",    str(interval))
         .replace("<<<FPS>>>",         str(fps))
-        .replace("<<<OUTGIF>>>",      out_gif)
+        .replace("<<<OUTFILE>>>",     out_file)
         .replace("<<<DPI>>>",         str(dpi))
         .replace("<<<WORKERS>>>",     str(workers))
         .replace("<<<HAS_3D>>>",      str(has_3d))
+        .replace("<<<PIL_IMPORT>>>",  "from PIL import Image" if fmt == "gif" else "")
     )
 
     return result
@@ -645,7 +686,8 @@ def main():
     p.add_argument("--fps",     default=25,    type=int, help="Frames per second")
     p.add_argument("--workers", default=0,     type=int, help="0=auto=cpu_count")
     p.add_argument("--dpi",     default=100,   type=int, help="DPI for output")
-    p.add_argument("--out",     default=None,  help="Output GIF filename")
+    p.add_argument("--out",     default=None,  help="Output filename (default: <script>_animated.gif/mp4)")
+    p.add_argument("--format",  default="gif", choices=["gif", "mp4"], help="Output format (default: gif)")
     args = p.parse_args()
 
     try:
@@ -667,6 +709,7 @@ def main():
             workers=args.workers,
             dpi=args.dpi,
             out=args.out,
+            fmt=args.format,
             source_name=args.script,
         )
     except (AssertionError, ValueError) as exc:
