@@ -589,6 +589,9 @@ FIXTURE_CONFIGS = {
     "bar_chart.py":         {"var": "t", "range_str": "0.5,5"},
     "contour.py":           {"var": "t", "range_str": "0.5,4"},
     "histogram.py":         {"var": "t", "range_str": "0.5,3"},
+    "rotate_3d_surface.py": {"var": "azim", "range_str": "0,360"},
+    "rotate_3d_scatter.py": {"var": "azim", "range_str": "0,360"},
+    "rotate_2d_polar.py":   {"var": "angle", "range_str": "0,2*pi"},
 }
 
 

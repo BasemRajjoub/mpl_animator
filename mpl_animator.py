@@ -43,6 +43,7 @@ CONFIG_METHODS = {
     "grid", "legend", "colorbar", "text", "annotate",
     "tight_layout", "suptitle", "view_init",
     "set_proj_type", "set_theta_zero_location", "set_rlabel_position",
+    "set_theta_offset", "set_rorigin", "set_rlim",
 }
 
 ALL_PLOT_METHODS = DRAW_METHODS | CONFIG_METHODS
