@@ -1,4 +1,4 @@
-"""Comprehensive test suite for animator.py."""
+"""Comprehensive test suite for mpl_animator.py."""
 
 import ast
 import os
@@ -9,7 +9,7 @@ import warnings
 
 import pytest
 
-from animator import (
+from mpl_animator import (
     ALL_PLOT_METHODS,
     CONFIG_METHODS,
     DRAW_METHODS,
@@ -21,7 +21,6 @@ from animator import (
     scan_ast,
     _inject_agg,
     _gen_clear_lines,
-    _safe_eval_node,
 )
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -630,7 +629,7 @@ class TestEndToEnd:
     def test_wave_static_backward_compatible(self):
         """The original wave_static.py example should still work."""
         wave_path = os.path.join(os.path.dirname(__file__), "wave_static.py")
-        with open(wave_path) as f:
+        with open(wave_path, encoding="utf-8") as f:
             src = f.read()
         result = animate(src, var="f", range_str="3,60", frames=10)
         ast.parse(result)

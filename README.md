@@ -1,4 +1,4 @@
-# animator.py
+# mpl_animator.py
 
 Turn any static matplotlib script into an animated GIF by sweeping a variable.
 
@@ -12,16 +12,16 @@ pip install matplotlib numpy Pillow
 
 ```bash
 # Basic: animate variable `f` from 3 to 60
-python animator.py wave_static.py --var f --range "3,60"
+python mpl_animator.py wave_static.py --var f --range "3,60"
 
 # Math expressions in range, custom frame count and FPS
-python animator.py plot.py --var t --range "0,2*pi" --frames 60 --fps 30
+python mpl_animator.py plot.py --var t --range "0,2*pi" --frames 60 --fps 30
 
 # Control output quality and parallelism
-python animator.py plot.py --var alpha --range "0,1" --dpi 150 --workers 8
+python mpl_animator.py plot.py --var alpha --range "0,1" --dpi 150 --workers 8
 
 # Custom output filename
-python animator.py plot.py --var t --range "0,1" --out my_animation.gif
+python mpl_animator.py plot.py --var t --range "0,1" --out my_animation.gif
 ```
 
 This generates a `<script>_animated.py` file. Run it to produce the GIF:
@@ -40,7 +40,7 @@ python wave_static_animated.py --sequential # single-threaded fallback
 ## Library usage
 
 ```python
-from animator import animate
+from mpl_animator import animate
 
 src = open("my_plot.py").read()
 animated_code = animate(src, var="t", range_str="0,6.28", frames=60, fps=25)
@@ -54,6 +54,10 @@ open("my_plot_animated.py", "w").write(animated_code)
 ## Tests
 
 ```bash
-pytest test_animator.py -v              # fast tests (109)
+pytest test_animator.py -v              # fast tests (111)
 pytest test_animator.py -v -m slow      # slow tests that generate actual GIFs
 ```
+
+---
+
+Built with the assistance of [Claude Code](https://claude.ai/claude-code)
