@@ -88,7 +88,7 @@ python wave_static_animated.py
 
 The animator detects that `y`, `spectrum` depend on `f`, moves them into the per-frame `update()`, and keeps the figure/axes creation static - so only the data redraws each frame.
 
-![wave animation](examples/wave_static_animated.gif)
+![wave animation](https://raw.githubusercontent.com/BasemRajjoub/mpl_animator/main/examples/wave_static_animated.gif)
 
 ---
 
@@ -123,7 +123,7 @@ python lissajous_3d_static_animated.py
 
 For 3D plots the animator calls `fig.clear()` and recreates the axes each frame (required to preserve the `projection='3d'` state), then re-runs all drawing commands with the new value of `a`.
 
-![lissajous animation](examples/lissajous_3d_static_animated.gif)
+![lissajous animation](https://raw.githubusercontent.com/BasemRajjoub/mpl_animator/main/examples/lissajous_3d_static_animated.gif)
 
 ---
 
