@@ -593,7 +593,7 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
 
 
 # -- CLI entry point --
-if __name__ == "__main__":
+def main():
     import argparse
 
     p = argparse.ArgumentParser(
@@ -624,9 +624,13 @@ if __name__ == "__main__":
     )
 
     out_script = Path(args.script).stem + "_animated.py"
-    Path(out_script).write_text(result)
+    Path(out_script).write_text(result, encoding="utf-8")
     print(f"Written  -> {out_script}")
     print(f"   Variable : {args.var}")
     print(f"   Workers  : {args.workers or 'auto (cpu_count)'}")
     print(f"   Run      : python {out_script}")
     print(f"   Seq only : python {out_script} --sequential")
+
+
+if __name__ == "__main__":
+    main()
