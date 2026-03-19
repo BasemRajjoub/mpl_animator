@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # signal parameters
-f   = 10.0                          # ← this is the variable to animate
+f   = 10.0                          # <- variable to animate
 t   = np.linspace(0, 1, 1000)
 y   = np.sin(2*np.pi*f*t) + 0.4*np.sin(2*np.pi*2*f*t)
 

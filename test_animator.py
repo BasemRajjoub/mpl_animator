@@ -33,9 +33,9 @@ def _read_fixture(name):
         return f.read()
 
 
-# ═══════════════════════════════════════════════════════════════
-# parse_val — safe expression evaluator
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
+# parse_val - safe expression evaluator
+# ===============================================================
 class TestParseVal:
     def test_integer(self):
         assert parse_val("42") == 42
@@ -94,9 +94,9 @@ class TestParseVal:
         assert parse_val("  3  ") == 3
 
 
-# ═══════════════════════════════════════════════════════════════
-# scan_ast — AST scanning
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
+# scan_ast - AST scanning
+# ===============================================================
 class TestScanAST:
     def test_finds_figure_line(self):
         src = textwrap.dedent("""\
@@ -195,7 +195,7 @@ class TestScanAST:
             plt.show()
         """)
         tree, info = scan_ast(src)
-        # y += t is on line 6 — should have 'y' in assigns
+        # y += t is on line 6 - should have 'y' in assigns
         stmt5 = tree.body[5]  # y += t
         assert "y" in info.node_assigns[id(stmt5)]
 
@@ -246,9 +246,9 @@ class TestScanAST:
         assert info.show_node is None
 
 
-# ═══════════════════════════════════════════════════════════════
-# build_deps — dependency tracking
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
+# build_deps - dependency tracking
+# ===============================================================
 class TestBuildDeps:
     def test_direct_dependency(self):
         src = textwrap.dedent("""\
@@ -311,9 +311,9 @@ class TestBuildDeps:
         assert deps == set()  # no dependents
 
 
-# ═══════════════════════════════════════════════════════════════
-# partition — statement classification
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
+# partition - statement classification
+# ===============================================================
 class TestPartition:
     def test_simple_partition(self):
         src = textwrap.dedent("""\
@@ -387,9 +387,9 @@ class TestPartition:
         assert any("set_title" in s for s in plot)
 
 
-# ═══════════════════════════════════════════════════════════════
-# _inject_agg — Agg backend injection
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
+# _inject_agg - Agg backend injection
+# ===============================================================
 class TestInjectAgg:
     def test_injects_before_matplotlib_import(self):
         stmts = ["import matplotlib.pyplot as plt", "x = 1"]
@@ -417,9 +417,9 @@ class TestInjectAgg:
         assert agg_count == 1
 
 
-# ═══════════════════════════════════════════════════════════════
-# _gen_clear_lines — axes clearing
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
+# _gen_clear_lines - axes clearing
+# ===============================================================
 class TestGenClearLines:
     def test_no_axes_info(self):
         result = _gen_clear_lines([])
@@ -446,9 +446,9 @@ class TestGenClearLines:
         assert "clear" in text
 
 
-# ═══════════════════════════════════════════════════════════════
-# Code generation — output validity
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
+# Code generation - output validity
+# ===============================================================
 class TestCodeGeneration:
     def test_output_is_valid_python(self):
         src = _read_fixture("simple_line.py")
@@ -503,9 +503,9 @@ class TestCodeGeneration:
         ast.parse(result)
 
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # Input validation
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 class TestValidation:
     def test_missing_variable_raises(self):
         src = textwrap.dedent("""\
@@ -572,9 +572,9 @@ class TestValidation:
             assert any("No drawing methods" in str(x.message) for x in w)
 
 
-# ═══════════════════════════════════════════════════════════════
-# End-to-end — animate() on every fixture
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
+# End-to-end - animate() on every fixture
+# ===============================================================
 FIXTURE_CONFIGS = {
     "simple_line.py":       {"var": "t", "range_str": "0,6.28"},
     "multi_subplot.py":     {"var": "t", "range_str": "0.5,4"},
@@ -628,7 +628,7 @@ class TestEndToEnd:
 
     def test_wave_static_backward_compatible(self):
         """The original wave_static.py example should still work."""
-        wave_path = os.path.join(os.path.dirname(__file__), "wave_static.py")
+        wave_path = os.path.join(os.path.dirname(__file__), "examples", "wave_static.py")
         with open(wave_path, encoding="utf-8") as f:
             src = f.read()
         result = animate(src, var="f", range_str="3,60", frames=10)
@@ -637,9 +637,9 @@ class TestEndToEnd:
         assert "plt.show()" not in result
 
 
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 # Method categories sanity checks
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
 class TestMethodCategories:
     def test_draw_and_config_are_disjoint(self):
         assert DRAW_METHODS & CONFIG_METHODS == set()
@@ -660,9 +660,9 @@ class TestMethodCategories:
         assert "legend" in CONFIG_METHODS
 
 
-# ═══════════════════════════════════════════════════════════════
-# Slow tests — actually run the generated scripts
-# ═══════════════════════════════════════════════════════════════
+# ===============================================================
+# Slow tests - actually run the generated scripts
+# ===============================================================
 @pytest.mark.slow
 class TestSlowExecution:
     """Tests that actually execute the generated animated scripts.

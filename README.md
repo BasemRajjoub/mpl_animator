@@ -31,6 +31,75 @@ python wave_static_animated.py              # parallel (default)
 python wave_static_animated.py --sequential # single-threaded fallback
 ```
 
+## Examples
+
+### Example 1 - Wave & spectrum (2D)
+
+`wave_static.py` plots a signal and its frequency spectrum for a fixed frequency `f`:
+
+```python
+# wave_static.py  (key lines)
+f   = 10.0                          # <- variable to animate
+t   = np.linspace(0, 1, 1000)
+y   = np.sin(2*np.pi*f*t) + 0.4*np.sin(2*np.pi*2*f*t)
+
+freqs    = np.fft.rfftfreq(len(t), d=t[1]-t[0])
+spectrum = np.abs(np.fft.rfft(y))
+
+fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6))
+ax1.plot(t, y, 'royalblue', lw=1.5)
+ax2.plot(freqs, spectrum, 'tomato', lw=1.5)
+plt.show()
+```
+
+Animate `f` from 3 Hz to 60 Hz:
+
+```bash
+python mpl_animator.py examples/wave_static.py --var f --range "3,60" --frames 60 --fps 20
+python wave_static_animated.py
+```
+
+The animator detects that `y`, `spectrum` depend on `f`, moves them into the per-frame `update()`, and keeps the figure/axes creation static - so only the data redraws each frame.
+
+![wave animation](examples/wave_static_animated.gif)
+
+---
+
+### Example 2 - 3D Lissajous curve
+
+`lissajous_3d_static.py` draws a 3D Lissajous figure for fixed frequency ratio `a`:
+
+```python
+# lissajous_3d_static.py  (key lines)
+a  = 3.0          # <- variable to animate
+b  = 2.0
+c  = 1.0
+
+t = np.linspace(0, 2 * np.pi, 1000)
+x = np.sin(a * t + delta)
+y = np.sin(b * t)
+z = np.sin(c * t)
+
+fig = plt.figure(figsize=(8, 6))
+ax  = fig.add_subplot(111, projection='3d')
+ax.scatter(x, y, z, c=colors, s=2, alpha=0.8)
+ax.set_title(f"3D Lissajous  a={a:.1f}, b={b:.1f}, c={c:.1f}")
+plt.show()
+```
+
+Animate `a` from 1 to 6, sweeping through different curve topologies:
+
+```bash
+python mpl_animator.py examples/lissajous_3d_static.py --var a --range "1,6" --frames 80 --fps 20
+python lissajous_3d_static_animated.py
+```
+
+For 3D plots the animator calls `fig.clear()` and recreates the axes each frame (required to preserve the `projection='3d'` state), then re-runs all drawing commands with the new value of `a`.
+
+![lissajous animation](examples/lissajous_3d_static_animated.gif)
+
+---
+
 ## How it works
 
 1. Parses your script's AST to find which variables depend on the animated one
