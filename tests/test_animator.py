@@ -667,10 +667,13 @@ class TestMethodCategories:
 class TestSlowExecution:
     """Tests that actually execute the generated animated scripts.
     Run with: pytest -m slow
+    GIFs are saved to tests/output/ for inspection.
     """
-    @pytest.mark.parametrize("fixture_name", ["simple_line.py", "bar_chart.py"])
+    @pytest.mark.parametrize("fixture_name", list(FIXTURE_CONFIGS.keys()))
     def test_generated_script_produces_gif(self, fixture_name, tmp_path):
         """Run generated script and check that a GIF is produced."""
+        if fixture_name == "implicit_figure.py":
+            pytest.xfail("implicit_figure.py has no explicit figure creation; animate() already warns this may not work")
         src = _read_fixture(fixture_name)
         cfg = FIXTURE_CONFIGS[fixture_name]
         gif_name = fixture_name.replace(".py", "_animated.gif")
@@ -693,3 +696,9 @@ class TestSlowExecution:
         assert gif_path.exists(), \
             f"GIF not created. stdout: {proc.stdout}\nstderr: {proc.stderr}"
         assert gif_path.stat().st_size > 0
+
+        # Copy GIF to tests/output/ so it can be inspected after the run
+        import shutil
+        out_dir = os.path.join(os.path.dirname(__file__), "output")
+        os.makedirs(out_dir, exist_ok=True)
+        shutil.copy(gif_path, os.path.join(out_dir, gif_name))

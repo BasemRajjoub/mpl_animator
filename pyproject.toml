@@ -35,3 +35,8 @@ mpl-animator = "mpl_animator:main"
 
 [tool.setuptools]
 py-modules = ["mpl_animator"]
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: tests that generate actual GIF files (run with -m slow)",
+]

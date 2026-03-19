@@ -401,12 +401,39 @@ from PIL import Image
 def update(_frame):
 <<<UPDATE_BODY>>>
 
-# -- sequential (FuncAnimation) --------------------------------------
+# -- shared GIF stitching --------------------------------------------
+def _stitch_gif(png_paths, out_gif, interval):
+    """Save a list of PNG paths as an animated GIF."""
+    imgs = [Image.open(p).convert("RGBA") for p in png_paths]
+    imgs[0].save(out_gif, save_all=True, append_images=imgs[1:],
+                 loop=0, duration=interval, optimize=False)
+
+# -- sequential renderer ---------------------------------------------
+# 3D plots recreate fig/ax each frame, so FuncAnimation (which holds a
+# reference to the original fig) produces blank frames. Instead we render
+# each frame to a PNG and stitch, matching what the parallel renderer does.
+_HAS_3D = <<<HAS_3D>>>
+
 def render_sequential():
-    ani = animation.FuncAnimation(
-        fig, update, frames=<<<FRAMES>>>, interval=<<<INTERVAL>>>, blit=False)
-    ani.save("<<<OUTGIF>>>", writer="pillow", fps=<<<FPS>>>)
-    print("  Saved ->", "<<<OUTGIF>>>")
+    if _HAS_3D:
+        tmpdir = tempfile.mkdtemp(prefix="anim_")
+        try:
+            paths = []
+            for _i in range(<<<FRAMES>>>):
+                update(_i)
+                _path = os.path.join(tmpdir, f"frame_{_i:05d}.png")
+                plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
+                plt.close("all")
+                paths.append(_path)
+            _stitch_gif(paths, "<<<OUTGIF>>>", <<<INTERVAL>>>)
+            print("  Saved ->", "<<<OUTGIF>>>")
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+    else:
+        ani = animation.FuncAnimation(
+            fig, update, frames=<<<FRAMES>>>, interval=<<<INTERVAL>>>, blit=False)
+        ani.save("<<<OUTGIF>>>", writer="pillow", fps=<<<FPS>>>)
+        print("  Saved ->", "<<<OUTGIF>>>")
 
 # -- parallel worker (one PNG per frame) -----------------------------
 def _render_one(job):
@@ -427,9 +454,7 @@ def render_parallel(n_workers):
             paths = list(pool.imap(_render_one, jobs, chunksize=chunk))
         paths.sort()
         print(f"  Stitching {len(paths)} frames...")
-        imgs = [Image.open(q).convert("RGBA") for q in paths]
-        imgs[0].save("<<<OUTGIF>>>", save_all=True, append_images=imgs[1:],
-                     loop=0, duration=<<<INTERVAL>>>, optimize=False)
+        _stitch_gif(paths, "<<<OUTGIF>>>", <<<INTERVAL>>>)
         print("  Saved ->", "<<<OUTGIF>>>")
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -538,16 +563,38 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     # -- Phase 6: Build sections --
     static_block = "\n".join(final_static)
 
-    # For 3D plots, include figure creation in the update body
-    has_3d = any(ax.is_3d for ax in info.ax_info)
+    # For 3D plots, include figure creation in the update body.
+    # Collect 3D axes info in one pass to avoid iterating ax_info multiple times.
+    has_3d = False
+    ax_3d_sources = []
+    ax_3d_vars = {"fig"}
+    for _ax in info.ax_info:
+        if _ax.is_3d:
+            has_3d = True
+            ax_3d_vars.add(_ax.var_name)
+            if _ax.creation_source:
+                ax_3d_sources.append(_ax.creation_source)
+
     fig_recreation = ""
+    global_decl = ""
     if has_3d and info.fig_node is not None:
         fig_source = _get_stmt_source(src, info.fig_node)
-        fig_recreation = f"    fig.clear()\n    {fig_source}\n"
+        # After fig.clear() the old axes objects are invalid, so we also re-run
+        # each axes creation statement (ax = fig.add_subplot(...)) inside update().
+        fig_recreation = (
+            _ind("fig.clear()") + "\n"
+            + _ind(fig_source) + "\n"
+            + (_ind(ax_3d_sources) + "\n" if ax_3d_sources else "")
+        )
+        # Declare fig and all axes variables as global. Without this Python sees
+        # the assignments inside update() and treats them as locals, causing
+        # UnboundLocalError on fig.clear() before any assignment has happened.
+        global_decl = _ind(f"global {', '.join(sorted(ax_3d_vars))}") + "\n"
 
     # update() body
     update_body = (
         f"    {var} = {start_val!r} + _frame * {step!r}\n"
+        + global_decl
         + (_ind(dynamic_stmts) + "\n" if dynamic_stmts else "")
         + (fig_recreation if has_3d else (_ind(clear) + "\n"))
         + _ind(plot_stmts)
@@ -577,6 +624,7 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         .replace("<<<OUTGIF>>>",      out_gif)
         .replace("<<<DPI>>>",         str(dpi))
         .replace("<<<WORKERS>>>",     str(workers))
+        .replace("<<<HAS_3D>>>",      str(has_3d))
     )
 
     return result
