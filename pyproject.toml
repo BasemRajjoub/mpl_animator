@@ -4,13 +4,31 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mpl-animator"
-version = "0.1.0"
+version = "0.1.1"
 description = "Turn any static matplotlib script into an animated GIF by sweeping a variable"
 authors = [{name = "Basem Rajjoub"}]
-license = {text = "MIT"}
+license = "MIT"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = ["matplotlib", "numpy", "Pillow"]
+keywords = ["matplotlib", "animation", "gif", "visualization", "plot"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Visualization",
+]
+
+[project.urls]
+Homepage = "https://basemrajjoub.com"
+Repository = "https://github.com/BasemRajjoub/mpl-animator"
+Issues = "https://github.com/BasemRajjoub/mpl-animator/issues"
 
 [project.scripts]
 mpl-animator = "mpl_animator:main"

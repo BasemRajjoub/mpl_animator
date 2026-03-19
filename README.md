@@ -1,27 +1,46 @@
-# mpl_animator.py
+# mpl-animator
 
-Turn any static matplotlib script into an animated GIF by sweeping a variable.
+Turn any static matplotlib script into an animated GIF by sweeping a variable - no rewriting required.
+
+## Features
+
+- **Zero boilerplate** - point it at an existing script, it figures out the rest
+- **AST-based dependency tracking** - automatically identifies which variables and calculations need to update each frame
+- **Parallel rendering** - renders frames across all CPU cores via `multiprocessing`, falls back to sequential automatically
+- **Math expressions in ranges** - `--range "0,2*pi"` just works
+- **2D, 3D, and polar plots** - handles `plot_surface`, `scatter3D`, subplots, polar axes, and more
+- **Single-file, standalone** - `mpl_animator.py` can be dropped into any project with no install required; only depends on `matplotlib`, `numpy`, and `Pillow` (no exotic dependencies)
+- **Library API** - importable as a Python module for use in notebooks or pipelines
 
 ## Install
 
 ```bash
-pip install matplotlib numpy Pillow
+pip install mpl-animator
+```
+
+Or just copy the file - no install needed:
+
+```bash
+# copy mpl_animator.py into your project, then use it directly
+python mpl_animator.py my_plot.py --var t --range "0,1"
 ```
 
 ## Usage
 
+If installed via pip, use the `mpl-animator` command. If using the file directly, replace `mpl-animator` with `python mpl_animator.py` - everything else is identical.
+
 ```bash
 # Basic: animate variable `f` from 3 to 60
-python mpl_animator.py wave_static.py --var f --range "3,60"
+mpl-animator wave_static.py --var f --range "3,60"
 
 # Math expressions in range, custom frame count and FPS
-python mpl_animator.py plot.py --var t --range "0,2*pi" --frames 60 --fps 30
+mpl-animator plot.py --var t --range "0,2*pi" --frames 60 --fps 30
 
 # Control output quality and parallelism
-python mpl_animator.py plot.py --var alpha --range "0,1" --dpi 150 --workers 8
+mpl-animator plot.py --var alpha --range "0,1" --dpi 150 --workers 8
 
 # Custom output filename
-python mpl_animator.py plot.py --var t --range "0,1" --out my_animation.gif
+mpl-animator plot.py --var t --range "0,1" --out my_animation.gif
 ```
 
 This generates a `<script>_animated.py` file. Run it to produce the GIF:
@@ -123,10 +142,12 @@ open("my_plot_animated.py", "w").write(animated_code)
 ## Tests
 
 ```bash
-pytest test_animator.py -v              # fast tests (111)
-pytest test_animator.py -v -m slow      # slow tests that generate actual GIFs
+pytest tests/ -v              # fast tests (111)
+pytest tests/ -v -m slow      # slow tests that generate actual GIFs
 ```
 
 ---
+
+Author: [Basem Rajjoub](https://basemrajjoub.com)
 
 Built with the assistance of [Claude Code](https://claude.ai/claude-code)

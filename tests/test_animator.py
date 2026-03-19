@@ -628,7 +628,7 @@ class TestEndToEnd:
 
     def test_wave_static_backward_compatible(self):
         """The original wave_static.py example should still work."""
-        wave_path = os.path.join(os.path.dirname(__file__), "examples", "wave_static.py")
+        wave_path = os.path.join(os.path.dirname(__file__), "..", "examples", "wave_static.py")
         with open(wave_path, encoding="utf-8") as f:
             src = f.read()
         result = animate(src, var="f", range_str="3,60", frames=10)
