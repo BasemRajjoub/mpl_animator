@@ -1,0 +1,3572 @@
+[
+  {
+    "file": "animation/animate_decay.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/animated_histogram.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/animation_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "animation/bayes_update.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/double_pendulum.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/dynamic_image.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/frame_grabbing_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "animation/multiple_axes.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/pause_resume.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/rain.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/random_walk.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/simple_anim.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/simple_scatter.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/strip_chart.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "animation/unchained.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses FuncAnimation/ArtistAnimation"
+  },
+  {
+    "file": "axes_grid1/demo_anchored_direction_arrows.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/demo_axes_divider.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/demo_axes_grid.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/demo_axes_grid2.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/demo_axes_hbox_divider.py",
+    "var": "pad",
+    "range": "0.25,1.5",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axes_grid1/demo_axes_rgb.py",
+    "var": "r",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axes_grid1/demo_colorbar_with_axes_divider.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/demo_colorbar_with_inset_locator.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/demo_edge_colorbar.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/demo_fixed_size_axes.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/demo_imagegrid_aspect.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/inset_locator_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/inset_locator_demo2.py",
+    "var": "size",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axes_grid1/make_room_for_ylabel_using_axesgrid.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/parasite_simple.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/parasite_simple2.py",
+    "var": "pm_to_kms",
+    "range": "8736.488236160989,13104.732354241482",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axes_grid1/scatter_hist_locatable_axes.py",
+    "var": "binwidth",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axes_grid1/simple_anchored_artists.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/simple_axes_divider1.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/simple_axes_divider3.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/simple_axesgrid.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/simple_axesgrid2.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axes_grid1/simple_axisline4.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/axis_direction.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/demo_axis_direction.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/demo_axisline_style.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axisartist/demo_curvelinear_grid.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axisartist/demo_curvelinear_grid2.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axisartist/demo_floating_axes.py",
+    "var": "theta",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axisartist/demo_floating_axis.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/demo_parasite_axes.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/demo_parasite_axes2.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/demo_ticklabel_alignment.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/demo_ticklabel_direction.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/simple_axis_direction01.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/simple_axis_direction03.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/simple_axis_pad.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/simple_axisartist1.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "axisartist/simple_axisline.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "axisartist/simple_axisline3.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "color/color_by_yvalue.py",
+    "var": "upper",
+    "range": "0.385,2.31",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "color/color_cycle_default.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "color/color_demo.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "color/color_sequences.py",
+    "var": "n",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "color/colorbar_basics.py",
+    "var": "N",
+    "range": "18.5,111",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "color/colormap_reference.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "color/custom_cmap.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "color/individual_colors_from_cmap.py",
+    "var": "n_lines",
+    "range": "10.5,63",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "color/named_colors.py",
+    "var": "n",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "color/set_alpha.py",
+    "var": "n",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "event_handling/close_event.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/coords_demo.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "event_handling/cursor_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/data_browser.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/figure_axes_enter_leave.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/ginput_manual_clabel_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "event_handling/image_slices_viewer.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/keypress_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/lasso_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "event_handling/legend_picking.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/looking_glass.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/path_editor.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/pick_event_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/pick_event_demo2.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/poly_editor.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/pong_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "event_handling/resample.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "event_handling/timers.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/trifinder_event_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "event_handling/viewlims.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "event_handling/zoom_window.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "images_contours_and_fields/affine_image.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/barb_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/barcode_demo.py",
+    "var": "pixel_per_bar",
+    "range": "2.0,12",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/colormap_interactive_adjustment.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/colormap_normalizations.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "images_contours_and_fields/colormap_normalizations_symlognorm.py",
+    "var": "N",
+    "range": "160.0,240.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/contour_corner_mask.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/contour_demo.py",
+    "var": "delta",
+    "range": "0.0125,0.07500000000000001",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/contour_image.py",
+    "var": "delta",
+    "range": "0.25,1.5",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/contour_label_demo.py",
+    "var": "delta",
+    "range": "0.0125,0.07500000000000001",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/contourf_demo.py",
+    "var": "delta",
+    "range": "0.0125,0.07500000000000001",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/contourf_hatching.py",
+    "var": "n_levels",
+    "range": "3.0,18",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/contourf_log.py",
+    "var": "N",
+    "range": "50.0,300",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/contours_in_optimization_demo.py",
+    "var": "nx",
+    "range": "80.80000000000001,121.19999999999999",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/demo_bboximage.py",
+    "var": "xpad_fraction",
+    "range": "0.15,0.8999999999999999",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/figimage_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "images_contours_and_fields/image_annotated_heatmap.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/image_antialiasing.py",
+    "var": "k",
+    "range": "50.0,300",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/image_clip_path.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "images_contours_and_fields/image_demo.py",
+    "var": "delta",
+    "range": "0.0125,0.07500000000000001",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/image_masked.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/image_nonuniform.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/image_transparency_blend.py",
+    "var": "n_bins",
+    "range": "50.0,300",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/image_zcoord.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/interpolation_methods.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "images_contours_and_fields/irregulardatagrid.py",
+    "var": "npts",
+    "range": "160.0,240.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/layer_images.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/matshow.py",
+    "var": "a",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/multi_image.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "images_contours_and_fields/pcolor_demo.py",
+    "var": "N",
+    "range": "50.0,300",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/pcolormesh_grids.py",
+    "var": "nrows",
+    "range": "1.5,9",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/pcolormesh_levels.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/plot_streamplot.py",
+    "var": "w",
+    "range": "1.5,9",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/quadmesh_demo.py",
+    "var": "n",
+    "range": "6.0,36",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/quiver_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "images_contours_and_fields/quiver_simple_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "images_contours_and_fields/shading_example.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/specgram_demo.py",
+    "var": "dt",
+    "range": "0.00025,0.0015",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/spy_demos.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/tricontour_demo.py",
+    "var": "min_radius",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/tricontour_smooth_delaunay.py",
+    "var": "init_mask_frac",
+    "range": "0.1,2",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/tricontour_smooth_user.py",
+    "var": "min_radius",
+    "range": "0.075,0.44999999999999996",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/trigradient_demo.py",
+    "var": "min_radius",
+    "range": "0.1,0.6000000000000001",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/triinterp_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/tripcolor_demo.py",
+    "var": "min_radius",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/triplot_demo.py",
+    "var": "min_radius",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "images_contours_and_fields/watermark_image.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/axline.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/bar_colors.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/bar_label_demo.py",
+    "var": "width",
+    "range": "0.3,1.7999999999999998",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/bar_stacked.py",
+    "var": "width",
+    "range": "0.25,1.5",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/barchart.py",
+    "var": "width",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/barh.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/broken_barh.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/capstyle.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/categorical_variables.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/cohere.py",
+    "var": "dt",
+    "range": "0.005,0.03",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/csd_demo.py",
+    "var": "dt",
+    "range": "0.005,0.03",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/curve_error_band.py",
+    "var": "N",
+    "range": "320.0,480.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/errorbar_limits_simple.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/errorbar_subsample.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/eventcollection_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/eventplot_demo.py",
+    "var": "lineoffsets2",
+    "range": "0.5,3",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/fill.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/fill_between_alpha.py",
+    "var": "sigma",
+    "range": "0.005,0.03",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/fill_between_demo.py",
+    "var": "N",
+    "range": "10.5,63",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/fill_betweenx_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/gradient_bar.py",
+    "var": "N",
+    "range": "5.0,30",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/hat_graph.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/horizontal_barchart_distribution.py",
+    "var": "r",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/joinstyle.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/line_demo_dash_control.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/lines_with_ticks_demo.py",
+    "var": "nx",
+    "range": "80.80000000000001,121.19999999999999",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/linestyles.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/marker_reference.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/markevery_demo.py",
+    "var": "delta",
+    "range": "0.055,0.33",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/masked_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/multicolored_line.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/multivariate_marker_plot.py",
+    "var": "N",
+    "range": "12.5,75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/psd_demo.py",
+    "var": "dt",
+    "range": "0.015707963267948967,0.0942477796076938",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/scatter_demo2.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/scatter_hist.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/scatter_masked.py",
+    "var": "N",
+    "range": "50.0,300",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/scatter_star_poly.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/scatter_with_legend.py",
+    "var": "N",
+    "range": "22.5,135",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/simple_plot.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/span_regions.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/spectrum_demo.py",
+    "var": "dt",
+    "range": "0.005,0.03",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/stackplot_demo.py",
+    "var": "n",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/stairs_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "lines_bars_and_markers/stem_plot.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/step_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/timeline.py",
+    "var": "level",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/vline_hline_demo.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "lines_bars_and_markers/xcorr_acorr_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/anchored_artists.py",
+    "var": "size",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/bbox_intersect.py",
+    "var": "width",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/contour_manual.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/coords_report.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/custom_projection.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "misc/customize_rc.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/demo_agg_filter.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "misc/demo_ribbon_box.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "misc/fig_x.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/fill_spiral.py",
+    "var": "a",
+    "range": "0.5,3",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/findobj_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/font_indexing.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/ftface_props.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/histogram_path.py",
+    "var": "n",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/hyperlinks_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "misc/image_thumbnail_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "misc/keyword_plotting.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/logos2.py",
+    "var": "angle",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/multipage_pdf.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/multiprocess_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "misc/packed_bubbles.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "misc/patheffect_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/print_stdout_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "misc/rasterization_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/set_and_get.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/svg_filter_line.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/svg_filter_pie.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "misc/table_demo.py",
+    "var": "bar_width",
+    "range": "0.2,1.2000000000000002",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/tickedstroke_demo.py",
+    "var": "nx",
+    "range": "80.80000000000001,121.19999999999999",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/transoffset.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "misc/zorder_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/2dcollections3d.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/3d_bars.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/axlim_clip.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/bars3d.py",
+    "var": "k",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/box3d.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/contour3d.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/contour3d_2.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/contour3d_3.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/contourf3d.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/contourf3d_2.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/custom_shaded_3d_surface.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/errorbar3d.py",
+    "var": "estep",
+    "range": "7.5,45",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/fillbetween3d.py",
+    "var": "N",
+    "range": "25.0,150",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/fillunder3d.py",
+    "var": "N",
+    "range": "15.5,93",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/hist3d.py",
+    "var": "zpos",
+    "range": "0.1,2",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/imshow3d.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/intersecting_planes.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/lines3d.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/lorenz_attractor.py",
+    "var": "dt",
+    "range": "0.005,0.03",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/mixed_subplots.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/offset.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/pathpatch3d.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/polys3d.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/projections.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/quiver3d.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/rotate_axes3d_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "mplot3d/scatter3d.py",
+    "var": "n",
+    "range": "50.0,300",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/stem3d_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/subplot3d.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/surface3d.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/surface3d_2.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/surface3d_3.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/surface3d_radial.py",
+    "var": "r",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/text3d.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/tricontour3d.py",
+    "var": "min_radius",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/tricontourf3d.py",
+    "var": "min_radius",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/trisurf3d.py",
+    "var": "n_radii",
+    "range": "4.0,24",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/trisurf3d_2.py",
+    "var": "min_radius",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/view_planes_3d.py",
+    "var": "fontsize",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/voxels.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/voxels_numpy_logo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/voxels_rgb.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/voxels_torus.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "mplot3d/wire3d.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "mplot3d/wire3d_animation_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "mplot3d/wire3d_zero_stride.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "pie_and_polar_charts/bar_of_pie.py",
+    "var": "width",
+    "range": "0.1,0.6000000000000001",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pie_and_polar_charts/nested_pie.py",
+    "var": "size",
+    "range": "0.15,0.8999999999999999",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pie_and_polar_charts/pie_and_donut_labels.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pie_and_polar_charts/pie_features.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "pie_and_polar_charts/polar_bar.py",
+    "var": "N",
+    "range": "10.0,60",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pie_and_polar_charts/polar_demo.py",
+    "var": "r",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pie_and_polar_charts/polar_error_caps.py",
+    "var": "r",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pie_and_polar_charts/polar_legend.py",
+    "var": "angle",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pie_and_polar_charts/polar_scatter.py",
+    "var": "N",
+    "range": "120.0,180.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pyplots/pyplot_simple.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "pyplots/pyplot_text.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pyplots/pyplot_three.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "pyplots/pyplot_two_subplots.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "scales/asinh_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "scales/aspect_loglog.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "scales/custom_scale.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "scales/log_demo.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "scales/logit_demo.py",
+    "var": "xmax",
+    "range": "5.0,30",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "scales/power_norm.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "scales/scales.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "scales/symlog_demo.py",
+    "var": "dt",
+    "range": "0.005,0.03",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/arrow_guide.py",
+    "var": "x_tail",
+    "range": "0.05,0.30000000000000004",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/artist_reference.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "shapes_and_collections/collections.py",
+    "var": "nverts",
+    "range": "30.0,180",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/compound_path.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "shapes_and_collections/dolphin.py",
+    "var": "i",
+    "range": "0.1,2",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/donut.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/ellipse_arrow.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/ellipse_collection.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/ellipse_demo.py",
+    "var": "NUM",
+    "range": "200.0,300.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/fancybox_demo.py",
+    "var": "ncol",
+    "range": "1.0,6",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/hatch_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/hatch_style_reference.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "shapes_and_collections/line_collection.py",
+    "var": "num_arcs",
+    "range": "7.5,45",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/patch_collection.py",
+    "var": "N",
+    "range": "1.5,9",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/path_patch.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "shapes_and_collections/quad_bezier.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "shapes_and_collections/scatter.py",
+    "var": "N",
+    "range": "25.0,150",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "showcase/anatomy.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "showcase/firefox.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "showcase/integral.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "showcase/mandelbrot.py",
+    "var": "n",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "showcase/pan_zoom_overlap.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "showcase/stock_prices.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "showcase/xkcd.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "specialty_plots/advanced_hillshading.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "specialty_plots/anscombe.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "specialty_plots/hinton_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "specialty_plots/ishikawa_diagram.py",
+    "var": "offset",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "specialty_plots/leftventricle_bullseye.py",
+    "var": "n",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "specialty_plots/mri_with_eeg.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "specialty_plots/radar_chart.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "specialty_plots/sankey_basics.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "specialty_plots/sankey_links.py",
+    "var": "links_per_side",
+    "range": "3.0,18",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "specialty_plots/sankey_rankine.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "specialty_plots/skewt.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "specialty_plots/topographic_hillshading.py",
+    "var": "dx",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "spines/centered_spines_with_arrows.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "spines/multiple_yaxis_with_spines.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "spines/spine_placement_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "spines/spines.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "spines/spines_dropped.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/boxplot.py",
+    "var": "fs",
+    "range": "5.0,30",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/boxplot_color.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "statistics/boxplot_demo.py",
+    "var": "N",
+    "range": "400.0,600.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/boxplot_vs_violin.py",
+    "var": "std",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/bxp.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "statistics/confidence_ellipse.py",
+    "var": "n",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/customized_violin.py",
+    "var": "std",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/errorbar.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/errorbar_features.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/errorbar_limits.py",
+    "var": "xerr",
+    "range": "0.1,0.6000000000000001",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/errorbars_and_boxes.py",
+    "var": "n",
+    "range": "2.5,15",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/hexbin_demo.py",
+    "var": "n",
+    "range": "80000.0,120000.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/hist.py",
+    "var": "N_points",
+    "range": "80000.0,120000.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/histogram_bihistogram.py",
+    "var": "bin_width",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/histogram_cumulative.py",
+    "var": "sigma",
+    "range": "12.5,75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/histogram_histtypes.py",
+    "var": "mu_x",
+    "range": "160.0,240.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/histogram_multihist.py",
+    "var": "n_bins",
+    "range": "5.0,30",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/histogram_normalization.py",
+    "var": "dx",
+    "range": "0.05,0.30000000000000004",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/multiple_histograms_side_by_side.py",
+    "var": "number_of_bins",
+    "range": "10.0,60",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/time_series_histogram.py",
+    "var": "SNR",
+    "range": "0.05,0.30000000000000004",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "statistics/violinplot.py",
+    "var": "fs",
+    "range": "5.0,30",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "style_sheets/bmh.py",
+    "var": "a",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "style_sheets/dark_background.py",
+    "var": "L",
+    "range": "3.0,18",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "style_sheets/fivethirtyeight.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "style_sheets/ggplot.py",
+    "var": "width",
+    "range": "0.125,0.75",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "style_sheets/grayscale.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "style_sheets/petroff10.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "style_sheets/plot_solarizedlight2.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "style_sheets/style_sheets_reference.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/align_labels_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/auto_subplots_adjust.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "subplots_axes_and_figures/axes_box_aspect.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/axes_demo.py",
+    "var": "dt",
+    "range": "0.0005,0.003",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/axes_margins.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/axes_props.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/axes_zoom_effect.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/axhspan_demo.py",
+    "var": "sigma",
+    "range": "1.0,6",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/axis_equal_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/axis_labels_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/broken_axis.py",
+    "var": "d",
+    "range": "0.25,1.5",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/custom_figure_class.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "subplots_axes_and_figures/demo_constrained_layout.py",
+    "var": "n",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/demo_tight_layout.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/fahrenheit_celsius_scales.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/figure_size_units.py",
+    "var": "cm",
+    "range": "0.19685039370078738,1.1811023622047243",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/figure_title.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/ganged_plots.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/geo_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/gridspec_and_subplots.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/gridspec_customization.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/gridspec_multicolumn.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/gridspec_nested.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/invert_axes.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/multiple_figs_demo.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/secondary_axis.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/share_axis_lims_views.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/shared_axis_demo.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/subfigures.py",
+    "var": "a",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/subplot.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/subplot2grid.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/subplots_adjust.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "subplots_axes_and_figures/subplots_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/two_scales.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "subplots_axes_and_figures/zoom_inset_axes.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/accented_text.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/align_ylabels.py",
+    "var": "labelx",
+    "range": "-0.15,-0.09",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/angle_annotation.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "text_labels_and_annotations/angles_on_bracket_arrows.py",
+    "var": "angle",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/annotate_transform.py",
+    "var": "offset",
+    "range": "36.0,216",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/annotation_basic.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/annotation_demo.py",
+    "var": "ind",
+    "range": "640.0,960.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/annotation_polar.py",
+    "var": "ind",
+    "range": "640.0,960.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/arrow_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/autowrap.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/custom_legends.py",
+    "var": "N",
+    "range": "5.0,30",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/date.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/demo_annotation_box.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/demo_text_path.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "text_labels_and_annotations/demo_text_rotation_mode.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/dfrac_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/engineering_formatter.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/fancyarrow_demo.py",
+    "var": "ncol",
+    "range": "1.0,6",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/fancytextbox_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/figlegend_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/font_family_rc.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/font_file.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/font_table.py",
+    "var": "r",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/fonts_demo.py",
+    "var": "k",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/fonts_demo_kw.py",
+    "var": "k",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/label_subplots.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/legend.py",
+    "var": "a",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/legend_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "text_labels_and_annotations/line_with_text.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "text_labels_and_annotations/mathtext_asarray.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/mathtext_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/mathtext_examples.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/mathtext_fontfamily_example.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/multiline.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/placing_text_boxes.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/rainbow_text.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/stix_fonts_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/tex_demo.py",
+    "var": "delta",
+    "range": "0.3,1.7999999999999998",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/text_alignment.py",
+    "var": "width",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/text_commands.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/text_fontdict.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/text_rotation_relative_to_line.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/titles_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/unicode_minus.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/usetex_baseline_test.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "text_labels_and_annotations/usetex_fonteffects.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "text_labels_and_annotations/watermark_text.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/align_ticklabels.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/auto_ticks.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/centered_ticklabels.py",
+    "var": "r",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/colorbar_tick_labelling_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/custom_ticker1.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/date_concise_formatter.py",
+    "var": "N",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/date_demo_convert.py",
+    "var": "delta",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/date_demo_rrule.py",
+    "var": "delta",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/date_formatters_locators.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/date_index_formatter.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "ticks/date_precision_and_epochs.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/dollar_ticks.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/engformatter_offset.py",
+    "var": "size",
+    "range": "50.0,300",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/fig_axes_customize_simple.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/major_minor_demo.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/multilevel_ticks.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/scalarformatter.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/tick-formatters.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/tick-locators.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/tick_label_right.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/tick_labels_from_values.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/tick_xlabel_top.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "ticks/ticklabels_rotation.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "ticks/ticks_too_many.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "units/annotate_with_units.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "units/artist_tests.py",
+    "var": "t",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "units/bar_demo2.py",
+    "var": "width",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "units/bar_unit_demo.py",
+    "var": "width",
+    "range": "0.175,1.0499999999999998",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "units/basic_units.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "units/ellipse_with_units.py",
+    "var": "angle",
+    "range": "-15.0,-9.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "units/evans_test.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "contains class definition (complex pattern)"
+  },
+  {
+    "file": "units/radian_demo.py",
+    "var": "x",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "units/units_sample.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "units/units_scatter.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "user_interfaces/canvasagg.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "user_interfaces/embedding_in_gtk3_panzoom_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_in_gtk3_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_in_gtk4_panzoom_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_in_gtk4_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_in_qt_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_in_tk_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_in_wx2_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_in_wx3_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_in_wx4_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_in_wx5_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/embedding_webagg_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/fourier_demo_wx_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/gtk3_spreadsheet_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/gtk4_spreadsheet_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/mathtext_wx_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/mpl_with_glade3_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/mplcvd.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses interactive widgets"
+  },
+  {
+    "file": "user_interfaces/pylab_with_gtk3_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/pylab_with_gtk4_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/svg_histogram_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/svg_tooltip_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/toolmanager_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/web_application_server_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "user_interfaces/wxcursor_demo_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "userdemo/demo_gridspec06.py",
+    "var": "a",
+    "range": "0.5,3.0",
+    "status": "PASS",
+    "error": null
+  },
+  {
+    "file": "userdemo/simple_legend01.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "userdemo/simple_legend02.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "no suitable numeric variable found"
+  },
+  {
+    "file": "widgets/annotated_cursor.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/buttons.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/check_buttons.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/cursor.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/lasso_selector_demo_sgskip.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "sgskip in filename"
+  },
+  {
+    "file": "widgets/menu.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "widgets/mouse_cursor.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses event handling (mpl_connect)"
+  },
+  {
+    "file": "widgets/multicursor.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/polygon_selector_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/polygon_selector_simple.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/radio_buttons.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/range_slider.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/rectangle_selector.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/slider_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/slider_snap_demo.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/span_selector.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  },
+  {
+    "file": "widgets/textbox.py",
+    "var": null,
+    "range": null,
+    "status": "SKIP",
+    "error": "uses matplotlib widgets"
+  }
+]
