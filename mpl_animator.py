@@ -39,6 +39,7 @@ DRAW_METHODS = {
     "plot_surface", "plot_wireframe", "plot_trisurf", "scatter3D",
     "bar3d", "contour3D", "contourf3D",
     "quiver", "barbs",
+    "add_patch", "add_collection",
 }
 
 CONFIG_METHODS = {
@@ -49,6 +50,9 @@ CONFIG_METHODS = {
     "tight_layout", "suptitle", "view_init",
     "set_proj_type", "set_theta_zero_location", "set_rlabel_position",
     "set_theta_offset", "set_rorigin", "set_rlim",
+    "tick_params", "set_aspect", "set_facecolor",
+    "set_xscale", "set_yscale",
+    "subplots_adjust",
 }
 
 ALL_PLOT_METHODS = DRAW_METHODS | CONFIG_METHODS
@@ -312,7 +316,7 @@ def partition(src, tree, info, dep_vars, var):
         if assigned and assigned <= vars_set and not has_draw and not has_config:
             continue
 
-        depends_on_var = bool(assigned & (dep_vars | vars_set)) or bool(stmt_names & vars_set)
+        depends_on_var = bool(assigned & (dep_vars | vars_set)) or bool(stmt_names & (vars_set | dep_vars))
 
         if not fig_found:
             if depends_on_var:
@@ -340,7 +344,9 @@ def _gen_clear_lines(ax_info_list):
         v = ax.var_name
         if not ax.is_3d:
             out += [
-                f"_axs = list({v}) if hasattr({v},'__iter__') else [{v}]",
+                f"_axs = list({v}.values()) if hasattr({v},'values') else "
+                f"(list({v}.flat) if hasattr({v},'flat') else "
+                f"(list({v}) if hasattr({v},'__iter__') else [{v}]))",
                 "[_a.clear() for _a in _axs]",
             ]
 
@@ -367,8 +373,13 @@ def _inject_agg(static_stmts):
 def _ind(lst, n=4):
     pad = " " * n
     if isinstance(lst, str):
-        lst = lst.splitlines()
-    return "\n".join(pad + line for line in lst)
+        lines = lst.splitlines()
+    else:
+        # Flatten list items that may contain embedded newlines
+        lines = []
+        for item in lst:
+            lines.extend(item.splitlines())
+    return "\n".join(pad + line for line in lines)
 
 
 # -- Code generation template --

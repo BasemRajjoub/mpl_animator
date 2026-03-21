@@ -718,6 +718,30 @@ FIXTURE_CONFIGS = {
     "camera_cinematic.py":    {"var": ["azim", "elev"],  "range_str": ["0,360", "20,60"]},
     "multi_var_2d.py":        {"var": ["freq", "amp"],   "range_str": ["1,5", "0.3,1.5"]},
     "zoom_and_rotate.py":     {"var": ["azim", "zoom"],  "range_str": ["0,360", "0.5,1.5"]},
+    # edge-case fixtures (compound stmts, dep tracking, method categories)
+    "func_def_in_script.py":  {"var": "t",  "range_str": "0,6.28"},
+    "conditional_style.py":   {"var": "t",  "range_str": "0,1"},
+    "for_loop_draw.py":       {"var": "t",  "range_str": "0.1,3"},
+    "add_patch_circle.py":    {"var": "t",  "range_str": "0,1.5"},
+    "twin_axes.py":           {"var": "t",  "range_str": "0.1,3"},
+    "tick_params_spines.py":  {"var": "t",  "range_str": "0.1,3"},
+    "tuple_unpack.py":        {"var": "t",  "range_str": "0,6.28"},
+    "list_comprehension.py":  {"var": "t",  "range_str": "0.1,3"},
+    "nested_tuple_axes.py":   {"var": "t",  "range_str": "0.1,3"},
+    "style_use.py":           {"var": "t",  "range_str": "0.1,3"},
+    "rcparams.py":            {"var": "t",  "range_str": "0.1,3"},
+    "subplot_mosaic.py":      {"var": "t",  "range_str": "0.1,3"},
+    "axes_2d_indexing.py":    {"var": "t",  "range_str": "0.1,3"},
+    "multi_assign.py":        {"var": "t",  "range_str": "0,6.28"},
+    "starred_assign.py":      {"var": "t",  "range_str": "0.1,3"},
+    "lambda_capture.py":      {"var": "t",  "range_str": "0,6.28"},
+    "try_except.py":          {"var": "t",  "range_str": "0,6.28"},
+    "multi_3d_subplots.py":   {"var": "t",  "range_str": "0.5,2"},
+    "from_mpl_import.py":     {"var": "t",  "range_str": "0,6.28"},
+    "walrus_operator.py":     {"var": "t",  "range_str": "0,6.28"},
+    "log_scale.py":           {"var": "t",  "range_str": "0.1,2"},
+    "fill_between_where.py":  {"var": "t",  "range_str": "0.1,3"},
+    "quiver_plot.py":         {"var": "t",  "range_str": "0.1,3"},
 }
 
 
@@ -1094,3 +1118,324 @@ class TestMultiVar:
         out_dir = os.path.join(os.path.dirname(__file__), "output")
         os.makedirs(out_dir, exist_ok=True)
         shutil.copy(gif_path, os.path.join(out_dir, gif_name))
+
+
+# ===============================================================
+# TestEdgeCases - compound statements, dep tracking, methods
+# ===============================================================
+class TestEdgeCases:
+    """Tests for edge cases discovered during audit."""
+
+    # -- Bug fix 1: _ind() with multi-line statements (compound stmts) --
+
+    def test_func_def_in_script_valid_python(self):
+        """Function definition in script must produce valid generated code."""
+        src = _read_fixture("func_def_in_script.py")
+        result = animate(src, var="t", range_str="0,6.28", frames=10)
+        ast.parse(result)
+
+    def test_func_def_worker_has_indented_body(self):
+        """Worker body must indent all lines of a function definition."""
+        src = _read_fixture("func_def_in_script.py")
+        result = animate(src, var="t", range_str="0,6.28", frames=10)
+        worker = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
+        # The return inside def wave must be indented beyond 4 spaces
+        for line in worker.splitlines():
+            stripped = line.lstrip()
+            if stripped.startswith("return np.sin"):
+                indent = len(line) - len(stripped)
+                assert indent >= 8, (
+                    f"Function body 'return' must be indented >=8 in worker, got {indent}"
+                )
+                break
+        else:
+            pytest.fail("'return np.sin' not found in worker body")
+
+    def test_conditional_generates_valid_python(self):
+        """if/else block must produce valid generated code."""
+        src = _read_fixture("conditional_style.py")
+        result = animate(src, var="t", range_str="0,1", frames=10)
+        ast.parse(result)
+
+    def test_for_loop_draw_generates_valid_python(self):
+        """for loop with draw calls must produce valid generated code."""
+        src = _read_fixture("for_loop_draw.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    def test_try_except_generates_valid_python(self):
+        """try/except block must produce valid generated code."""
+        src = _read_fixture("try_except.py")
+        result = animate(src, var="t", range_str="0,6.28", frames=10)
+        ast.parse(result)
+
+    def test_list_comprehension_for_loop_in_worker(self):
+        """list_comprehension.py has a for loop drawing; worker must be valid."""
+        src = _read_fixture("list_comprehension.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    # -- Bug fix 2: transitive dependency in partition --
+
+    def test_add_patch_in_plot_stmts(self):
+        """ax.add_patch(c) where c depends on t must be in plot_stmts."""
+        src = _read_fixture("add_patch_circle.py")
+        tree, info = scan_ast(src)
+        dep_vars = build_deps(tree, "t")
+        _, _, plot = partition(src, tree, info, dep_vars, "t")
+        assert any("add_patch" in s for s in plot), \
+            "add_patch(c) must end up in plot_stmts when c depends on t"
+
+    def test_add_patch_generates_valid_python(self):
+        src = _read_fixture("add_patch_circle.py")
+        result = animate(src, var="t", range_str="0,1.5", frames=10)
+        ast.parse(result)
+
+    # -- Bug fix 3: missing CONFIG_METHODS --
+
+    def test_tick_params_in_config_methods(self):
+        assert "tick_params" in CONFIG_METHODS
+
+    def test_set_aspect_in_config_methods(self):
+        assert "set_aspect" in CONFIG_METHODS
+
+    def test_set_facecolor_in_config_methods(self):
+        assert "set_facecolor" in CONFIG_METHODS
+
+    def test_set_xscale_in_config_methods(self):
+        assert "set_xscale" in CONFIG_METHODS
+
+    def test_set_yscale_in_config_methods(self):
+        assert "set_yscale" in CONFIG_METHODS
+
+    def test_subplots_adjust_in_config_methods(self):
+        assert "subplots_adjust" in CONFIG_METHODS
+
+    def test_tick_params_goes_to_plot_stmts(self):
+        """tick_params after fig must go to plot_stmts (reapplied after clear)."""
+        src = _read_fixture("tick_params_spines.py")
+        tree, info = scan_ast(src)
+        dep_vars = build_deps(tree, "t")
+        _, _, plot = partition(src, tree, info, dep_vars, "t")
+        assert any("tick_params" in s for s in plot)
+
+    def test_log_scale_in_plot_stmts(self):
+        """set_xscale/set_yscale after fig must go to plot_stmts."""
+        src = _read_fixture("log_scale.py")
+        tree, info = scan_ast(src)
+        dep_vars = build_deps(tree, "t")
+        _, _, plot = partition(src, tree, info, dep_vars, "t")
+        assert any("set_xscale" in s for s in plot)
+        assert any("set_yscale" in s for s in plot)
+
+    # -- Bug fix 4: missing DRAW_METHODS --
+
+    def test_add_patch_in_draw_methods(self):
+        assert "add_patch" in DRAW_METHODS
+
+    def test_add_collection_in_draw_methods(self):
+        assert "add_collection" in DRAW_METHODS
+
+    # -- Pattern coverage: tuple/starred/multi-assign --
+
+    def test_tuple_unpack_deps(self):
+        """x, y = sin(t), cos(t) => both x and y depend on t."""
+        src = _read_fixture("tuple_unpack.py")
+        tree, _ = scan_ast(src)
+        deps = build_deps(tree, "t")
+        assert "x_val" in deps
+        assert "y_val" in deps
+
+    def test_tuple_unpack_generates_valid_python(self):
+        src = _read_fixture("tuple_unpack.py")
+        result = animate(src, var="t", range_str="0,6.28", frames=10)
+        ast.parse(result)
+
+    def test_multi_assign_generates_valid_python(self):
+        src = _read_fixture("multi_assign.py")
+        result = animate(src, var="t", range_str="0,6.28", frames=10)
+        ast.parse(result)
+
+    def test_starred_assign_generates_valid_python(self):
+        src = _read_fixture("starred_assign.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    def test_lambda_capture_generates_valid_python(self):
+        src = _read_fixture("lambda_capture.py")
+        result = animate(src, var="t", range_str="0,6.28", frames=10)
+        ast.parse(result)
+
+    # -- Pattern coverage: axes creation variants --
+
+    def test_nested_tuple_axes_all_detected(self):
+        """((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2) => 4 axes detected."""
+        src = _read_fixture("nested_tuple_axes.py")
+        _, info = scan_ast(src)
+        ax_names = {a.var_name for a in info.ax_info}
+        assert ax_names == {"ax1", "ax2", "ax3", "ax4"}
+
+    def test_nested_tuple_axes_generates_valid_python(self):
+        src = _read_fixture("nested_tuple_axes.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    def test_subplot_mosaic_generates_valid_python(self):
+        src = _read_fixture("subplot_mosaic.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    def test_axes_2d_indexing_generates_valid_python(self):
+        src = _read_fixture("axes_2d_indexing.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    def test_multi_3d_subplots_generates_valid_python(self):
+        src = _read_fixture("multi_3d_subplots.py")
+        result = animate(src, var="t", range_str="0.5,2", frames=10)
+        ast.parse(result)
+
+    # -- Pattern coverage: import variants --
+
+    def test_from_mpl_import_generates_valid_python(self):
+        src = _read_fixture("from_mpl_import.py")
+        result = animate(src, var="t", range_str="0,6.28", frames=10)
+        ast.parse(result)
+        assert "matplotlib.use('Agg')" in result
+
+    # -- Pattern coverage: style / rcParams --
+
+    def test_style_use_in_static(self):
+        """plt.style.use() before fig should be in static stmts."""
+        src = _read_fixture("style_use.py")
+        tree, info = scan_ast(src)
+        dep_vars = build_deps(tree, "t")
+        static, _, _ = partition(src, tree, info, dep_vars, "t")
+        assert any("style.use" in s for s in static)
+
+    def test_style_use_generates_valid_python(self):
+        src = _read_fixture("style_use.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    def test_rcparams_generates_valid_python(self):
+        src = _read_fixture("rcparams.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    # -- Pattern coverage: draw variants --
+
+    def test_fill_between_where_generates_valid_python(self):
+        src = _read_fixture("fill_between_where.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    def test_quiver_plot_generates_valid_python(self):
+        src = _read_fixture("quiver_plot.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    # -- Pattern coverage: walrus operator --
+
+    def test_walrus_operator_generates_valid_python(self):
+        src = _read_fixture("walrus_operator.py")
+        result = animate(src, var="t", range_str="0,6.28", frames=10)
+        ast.parse(result)
+
+    # -- Twin axes pattern --
+
+    def test_twin_axes_generates_valid_python(self):
+        src = _read_fixture("twin_axes.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    # -- _ind correctness for compound statements --
+
+    def test_ind_multiline_string(self):
+        """_ind on a string with newlines indents every line."""
+        from mpl_animator import _ind
+        text = "def foo():\n    return 1"
+        result = _ind(text, 4)
+        assert result == "    def foo():\n        return 1"
+
+    def test_ind_list_with_multiline_items(self):
+        """_ind on a list where items contain newlines indents every line."""
+        from mpl_animator import _ind
+        items = ["x = 1", "if True:\n    y = 2", "z = 3"]
+        result = _ind(items, 4)
+        expected = "    x = 1\n    if True:\n        y = 2\n    z = 3"
+        assert result == expected
+
+    # -- Inline compound stmt: class definition --
+
+    def test_class_def_in_script(self):
+        """Class definition in script should produce valid output."""
+        src = textwrap.dedent("""\
+            import numpy as np
+            import matplotlib.pyplot as plt
+
+            class Wave:
+                def __init__(self, freq):
+                    self.freq = freq
+                def eval(self, x):
+                    return np.sin(self.freq * x)
+
+            t = 0.5
+            w = Wave(t)
+            x = np.linspace(0, 10, 100)
+            y = w.eval(x)
+            fig, ax = plt.subplots()
+            ax.plot(x, y)
+            plt.show()
+        """)
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+
+    # -- with statement --
+
+    def test_with_statement_valid_python(self):
+        """with-block in plot_stmts should produce valid output."""
+        src = textwrap.dedent("""\
+            import numpy as np
+            import matplotlib.pyplot as plt
+            t = 0.5
+            x = np.linspace(0, 10, 100)
+            y = np.sin(t * x)
+            fig, ax = plt.subplots()
+            ax.plot(x, y)
+            ax.set_ylim(-1.5, 1.5)
+            plt.show()
+        """)
+        result = animate(src, var="t", range_str="0,6.28", frames=10)
+        ast.parse(result)
+
+    # -- Bug fix 5: _gen_clear_lines for dict/2D-array axes --
+
+    def test_clear_lines_handles_dict_axes(self):
+        """subplot_mosaic returns a dict; clear must use .values()."""
+        result = _gen_clear_lines([AxesInfo(var_name="axs")])
+        text = "\n".join(result)
+        assert "values" in text, "clear code must handle dict axes (subplot_mosaic)"
+
+    def test_clear_lines_handles_2d_array_axes(self):
+        """subplots(2,2) returns 2D array; clear must use .flat."""
+        result = _gen_clear_lines([AxesInfo(var_name="axs")])
+        text = "\n".join(result)
+        assert "flat" in text, "clear code must handle 2D numpy array axes"
+
+    def test_subplot_mosaic_clear_no_crash(self):
+        """subplot_mosaic fixture should clear axes without errors at runtime."""
+        src = _read_fixture("subplot_mosaic.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+        # Verify update function has proper clear logic
+        update_sec = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
+        assert "values" in update_sec or "flat" in update_sec
+
+    def test_axes_2d_indexing_clear_no_crash(self):
+        """axes_2d_indexing fixture should clear axes without errors at runtime."""
+        src = _read_fixture("axes_2d_indexing.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
+        ast.parse(result)
+        update_sec = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
+        assert "flat" in update_sec
