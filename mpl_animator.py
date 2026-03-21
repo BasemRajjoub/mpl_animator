@@ -1,13 +1,17 @@
 """
 mpl_animator.py -- convert ANY static matplotlib script to an animation.
 Author: Basem Rajjoub (https://basemrajjoub.com)
-Version: 0.1.3
+Version: 0.1.5
 Uses only matplotlib + multiprocessing + Pillow (GIF) / ffmpeg (MP4).
 
 Usage (CLI):
     python mpl_animator.py plot.py --var f --range "3,60"
     python mpl_animator.py plot.py --var t --range "0,2*pi" --frames 120 --fps 30
     python mpl_animator.py plot.py --var alpha --range "0,1" --format mp4
+    python mpl_animator.py plot.py --var t --range "0,1" --ping-pong
+    python mpl_animator.py plot.py --var t --range "0,1" --reverse
+    python mpl_animator.py plot.py --var t --range "0,1" --loop 3
+    python mpl_animator.py plot.py --var t alpha --range "0,6.28" "0,1"
     (run generated script with --sequential to skip parallel)
 
 Usage (library):
@@ -18,6 +22,7 @@ Usage (library):
 import ast
 import math
 import operator
+import shutil
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -68,7 +73,6 @@ _SAFE_FUNCS = {"sqrt": math.sqrt, "abs": abs, "sin": math.sin,
 
 
 def _safe_eval_node(node):
-    """Recursively evaluate an AST expression using only safe operations."""
     if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
         return node.value
     if isinstance(node, ast.Name):
@@ -106,8 +110,8 @@ def parse_val(s):
 class AxesInfo:
     var_name: str
     is_3d: bool = False
-    subplot_spec: str = ""       # e.g. "1, 1, 1" for add_subplot(1,1,1)
-    creation_source: str = ""    # full source line that creates this axes
+    subplot_spec: str = ""
+    creation_source: str = ""
 
 
 @dataclass
@@ -116,17 +120,16 @@ class ASTInfo:
     show_node: ast.stmt | None = None
     first_draw_node: ast.stmt | None = None
     last_draw_node: ast.stmt | None = None
-    node_assigns: dict = field(default_factory=dict)       # node -> set of var names
-    node_has_draw: dict = field(default_factory=dict)       # node -> bool
-    node_has_config: dict = field(default_factory=dict)     # node -> bool
-    node_is_show: dict = field(default_factory=dict)        # node -> bool
-    node_is_fig_creation: dict = field(default_factory=dict)  # node -> bool
-    ax_info: list = field(default_factory=list)             # list of AxesInfo
-    all_names: set = field(default_factory=set)             # all Name nodes in script
+    node_assigns: dict = field(default_factory=dict)
+    node_has_draw: dict = field(default_factory=dict)
+    node_has_config: dict = field(default_factory=dict)
+    node_is_show: dict = field(default_factory=dict)
+    node_is_fig_creation: dict = field(default_factory=dict)
+    ax_info: list = field(default_factory=list)
+    all_names: set = field(default_factory=set)
 
 
 def _get_assigned_names(target_node):
-    """Extract all variable names from an assignment target (handles tuples)."""
     names = set()
     for n in ast.walk(target_node):
         if isinstance(n, ast.Name):
@@ -135,18 +138,15 @@ def _get_assigned_names(target_node):
 
 
 def _node_uses_names(node):
-    """Get all Name references in an AST node."""
     return {n.id for n in ast.walk(node) if isinstance(n, ast.Name)}
 
 
 def _check_3d_projection(call_node):
-    """Check if a call has projection='3d' keyword argument."""
     for kw in call_node.keywords:
         if kw.arg == "projection":
             if isinstance(kw.value, ast.Constant) and kw.value.value == "3d":
                 return True
         if kw.arg == "subplot_kw":
-            # subplot_kw={'projection': '3d'} in plt.subplots()
             if isinstance(kw.value, ast.Dict):
                 for k, v in zip(kw.value.keys, kw.value.values):
                     if (isinstance(k, ast.Constant) and k.value == "projection"
@@ -156,7 +156,6 @@ def _check_3d_projection(call_node):
 
 
 def _extract_subplot_spec(call_node):
-    """Extract subplot spec args as a string, e.g. '1, 1, 1'."""
     parts = []
     for arg in call_node.args:
         if isinstance(arg, ast.Constant):
@@ -169,10 +168,8 @@ def scan_ast(src):
     tree = ast.parse(src)
     info = ASTInfo()
 
-    # Collect all names used in the script
     info.all_names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
 
-    # Analyze each top-level statement
     for stmt in tree.body:
         stmt_id = id(stmt)
         info.node_assigns[stmt_id] = set()
@@ -181,9 +178,7 @@ def scan_ast(src):
         info.node_is_show[stmt_id] = False
         info.node_is_fig_creation[stmt_id] = False
 
-        # Walk all nodes in this statement
         for node in ast.walk(stmt):
-            # Track assignments (Assign, AugAssign, AnnAssign)
             if isinstance(node, ast.Assign):
                 for target in node.targets:
                     info.node_assigns[stmt_id] |= _get_assigned_names(target)
@@ -192,7 +187,6 @@ def scan_ast(src):
             elif isinstance(node, ast.AnnAssign) and node.value is not None:
                 info.node_assigns[stmt_id] |= _get_assigned_names(node.target)
 
-            # Track method calls
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                 attr = node.func.attr
 
@@ -217,7 +211,6 @@ def scan_ast(src):
 
                     is_3d = _check_3d_projection(node)
 
-                    # Extract axes variables from assignment targets
                     if isinstance(stmt, ast.Assign):
                         for target in stmt.targets:
                             for elt in ast.walk(target):
@@ -236,7 +229,12 @@ def scan_ast(src):
 
 # -- Dependency tracking --
 def build_deps(tree, var):
-    """Phase 2: Build transitive dependency graph for `var`."""
+    """Phase 2: Build transitive dependency graph for `var`.
+
+    var may be a single variable name (str) or a list of root variable names.
+    Returns the union of all transitively dependent variable names.
+    """
+    roots = [var] if isinstance(var, str) else list(var)
     rhs_uses: dict[str, set[str]] = {}
 
     for node in ast.walk(tree):
@@ -256,8 +254,7 @@ def build_deps(tree, var):
             if isinstance(node.target, ast.Name):
                 rhs_uses.setdefault(node.target.id, set()).update(used)
 
-    # Transitive closure: find all variables that depend on `var`
-    found, queue = set(), {var}
+    found, queue = set(), set(roots)
     while queue:
         cur = queue.pop()
         for k, v in rhs_uses.items():
@@ -269,11 +266,9 @@ def build_deps(tree, var):
 
 # -- Statement partitioning --
 def _get_stmt_source(src, stmt):
-    """Extract full source text for a statement, handling multi-line."""
     seg = ast.get_source_segment(src, stmt)
     if seg is not None:
         return seg
-    # Fallback: use line numbers
     lines = src.splitlines()
     start = stmt.lineno - 1
     end = getattr(stmt, "end_lineno", stmt.lineno)
@@ -281,10 +276,14 @@ def _get_stmt_source(src, stmt):
 
 
 def partition(src, tree, info, dep_vars, var):
-    """Phase 3: Partition top-level statements into static/dynamic/plot/show."""
-    static_stmts = []    # run once (setup)
-    dynamic_stmts = []   # recalculated per frame (depend on animated var)
-    plot_stmts = []      # drawing commands (run per frame after dynamic)
+    """Phase 3: Partition top-level statements into static/dynamic/plot/show.
+
+    var may be a single variable name (str) or a list of animated variable names.
+    """
+    vars_set = {var} if isinstance(var, str) else set(var)
+    static_stmts = []
+    dynamic_stmts = []
+    plot_stmts = []
 
     fig_found = False
 
@@ -292,7 +291,6 @@ def partition(src, tree, info, dep_vars, var):
         sid = id(stmt)
         text = _get_stmt_source(src, stmt)
 
-        # Skip show() calls entirely
         if info.node_is_show[sid]:
             continue
 
@@ -304,32 +302,24 @@ def partition(src, tree, info, dep_vars, var):
         if is_fig:
             fig_found = True
 
-        # Names used in this statement
         stmt_names = _node_uses_names(stmt)
 
-        # If it's figure creation, always static
         if is_fig:
             static_stmts.append(text)
             continue
 
-        # If it assigns the animated variable itself, skip it
-        # (we generate var = start + frame * step)
-        if var in assigned and not (assigned - {var}):
-            # Pure assignment of the animated variable -- skip
-            # But only if it's not also a draw/config call
-            if not has_draw and not has_config:
-                continue
+        # Skip pure assignment of animated variable(s) — we generate our own
+        if assigned and assigned <= vars_set and not has_draw and not has_config:
+            continue
 
-        depends_on_var = bool(assigned & (dep_vars | {var})) or (var in stmt_names)
+        depends_on_var = bool(assigned & (dep_vars | vars_set)) or bool(stmt_names & vars_set)
 
         if not fig_found:
-            # Before figure creation: static or dynamic setup
             if depends_on_var:
                 dynamic_stmts.append(text)
             else:
                 static_stmts.append(text)
         else:
-            # After figure creation: plot/config or dynamic
             if has_draw or has_config:
                 plot_stmts.append(text)
             elif depends_on_var:
@@ -342,21 +332,16 @@ def partition(src, tree, info, dep_vars, var):
 
 # -- Axes clearing code generation --
 def _gen_clear_lines(ax_info_list):
-    """Generate clearing code for axes, handling 2D and 3D differently."""
     if not ax_info_list:
         return ["plt.gca().clear()"]
 
     out = []
-
-    # 3D axes are cleared by fig.clear() + axes recreation in animate(), not here.
-    # This loop only runs for 2D axes.
     for ax in ax_info_list:
         v = ax.var_name
         if not ax.is_3d:
-            # Wrap in list so single axes and arrays of axes are handled the same way
             out += [
                 f"_axs = list({v}) if hasattr({v},'__iter__') else [{v}]",
-                f"[_a.clear() for _a in _axs]",
+                "[_a.clear() for _a in _axs]",
             ]
 
     return out if out else ["plt.gca().clear()"]
@@ -364,7 +349,6 @@ def _gen_clear_lines(ax_info_list):
 
 # -- Agg backend injection --
 def _inject_agg(static_stmts):
-    """Inject matplotlib.use('Agg') before first matplotlib import."""
     result = []
     agg_done = False
     for stmt in static_stmts:
@@ -381,7 +365,6 @@ def _inject_agg(static_stmts):
 
 # -- Indentation helper --
 def _ind(lst, n=4):
-    """Indent a list of strings (or a single multi-line string) by n spaces."""
     pad = " " * n
     if isinstance(lst, str):
         lst = lst.splitlines()
@@ -390,33 +373,30 @@ def _ind(lst, n=4):
 
 # -- Code generation template --
 TEMPLATE = '''\
-"""Auto-generated by mpl-animator v0.1.3 from <<<SOURCE>>>
-   <<<VAR>>> sweeps <<<START>>> -> <<<END>>> over <<<FRAMES>>> frames @ <<<FPS>>>fps
+"""Auto-generated by mpl-animator v0.1.5 from <<<SOURCE>>>
+   <<<VAR_SUMMARY>>> over <<<FRAMES>>> frames @ <<<FPS>>>fps
 """
 <<<STATIC>>>
 import matplotlib.animation as animation
 import multiprocessing, os, subprocess, tempfile, shutil, time
-<<<PIL_IMPORT>>>
 
 # -- frame update ----------------------------------------------------
 def update(_frame):
 <<<UPDATE_BODY>>>
 
 # -- output helpers --------------------------------------------------
-def _stitch_gif(png_paths, out_gif, interval):
-    """Save a list of PNG paths as an animated GIF."""
+def _stitch_gif(png_paths, out_gif, interval, loop):
     from PIL import Image
     imgs = [Image.open(p).convert("RGBA") for p in png_paths]
     imgs[0].save(out_gif, save_all=True, append_images=imgs[1:],
-                 loop=0, duration=interval, optimize=False)
+                 loop=loop, duration=interval, optimize=False)
 
 def _encode_mp4(png_dir, out_mp4, fps):
-    """Encode sorted PNGs in png_dir to MP4 using ffmpeg."""
     cmd = [
         "ffmpeg", "-y",
         "-framerate", str(fps),
         "-i", os.path.join(png_dir, "frame_%05d.png"),
-        "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",  # libx264 requires even dimensions
+        "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
         "-vcodec", "libx264",
         "-pix_fmt", "yuv420p",
         "-crf", "18",
@@ -426,64 +406,76 @@ def _encode_mp4(png_dir, out_mp4, fps):
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed:\\n{result.stderr}")
 
-def _save_output(png_paths, out_file, fps, interval):
-    """Stitch PNGs to GIF or MP4 based on output file extension."""
+def _save_output(png_paths, out_file, fps, interval, loop):
     if out_file.endswith(".mp4"):
-        png_dir = os.path.dirname(png_paths[0])
-        _encode_mp4(png_dir, out_file, fps)
+        _encode_mp4(os.path.dirname(png_paths[0]), out_file, fps)
     else:
-        _stitch_gif(png_paths, out_file, interval)
+        _stitch_gif(png_paths, out_file, interval, loop)
+
+# -- config ----------------------------------------------------------
+_HAS_3D   = <<<HAS_3D>>>
+_OUT_FILE = "<<<OUTFILE>>>"
+_FPS      = <<<FPS>>>
+_INTERVAL = <<<INTERVAL>>>
+_LOOP     = <<<LOOP>>>
+_FRAMES   = <<<FRAMES>>>
+_PING_PONG = <<<PING_PONG>>>
+
+def _frame_sequence():
+    fwd = list(range(_FRAMES))
+    return fwd + list(reversed(fwd[1:-1])) if _PING_PONG else fwd
 
 # -- sequential renderer ---------------------------------------------
-_HAS_3D = <<<HAS_3D>>>
-_OUT_FILE = "<<<OUTFILE>>>"
-_FPS = <<<FPS>>>
-_INTERVAL = <<<INTERVAL>>>
-
 def render_sequential():
+    frames = _frame_sequence()
+    total = len(frames)
     if _HAS_3D or _OUT_FILE.endswith(".mp4"):
         tmpdir = tempfile.mkdtemp(prefix="anim_")
         try:
             paths = []
-            for _i in range(<<<FRAMES>>>):
+            for idx, _i in enumerate(frames):
+                print(f"  Frame {idx+1}/{total}", end="\\r")
                 update(_i)
-                _path = os.path.join(tmpdir, f"frame_{_i:05d}.png")
+                _path = os.path.join(tmpdir, f"frame_{idx:05d}.png")
                 plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
                 if _HAS_3D:
                     plt.close("all")
                 paths.append(_path)
             if not _HAS_3D:
                 plt.close("all")
-            _save_output(paths, _OUT_FILE, _FPS, _INTERVAL)
+            print()
+            _save_output(paths, _OUT_FILE, _FPS, _INTERVAL, _LOOP)
             print("  Saved ->", _OUT_FILE)
         finally:
             shutil.rmtree(tmpdir, ignore_errors=True)
     else:
         ani = animation.FuncAnimation(
-            fig, update, frames=<<<FRAMES>>>, interval=_INTERVAL, blit=False)
+            fig, update, frames=frames, interval=_INTERVAL, blit=False)
         ani.save(_OUT_FILE, writer="pillow", fps=_FPS)
         print("  Saved ->", _OUT_FILE)
 
 # -- parallel worker (one PNG per frame) -----------------------------
 def _render_one(job):
-    _frame, _tmpdir = job
+    _frame, _idx, _tmpdir = job
 <<<WORKER_BODY>>>
-    _path = os.path.join(_tmpdir, f"frame_{_frame:05d}.png")
+    _path = os.path.join(_tmpdir, f"frame_{_idx:05d}.png")
     plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
     plt.close("all")
     return _path
 
 def render_parallel(n_workers):
+    frames = _frame_sequence()
+    total = len(frames)
     tmpdir = tempfile.mkdtemp(prefix="anim_")
-    chunk  = max(1, <<<FRAMES>>> // (n_workers * 4))  # keep all workers busy with small batches
-    print(f"  Rendering <<<FRAMES>>> frames on {n_workers} workers...")
+    chunk = max(1, total // (n_workers * 4))
+    print(f"  Rendering {total} frames on {n_workers} workers...")
     try:
-        jobs  = [(_i, tmpdir) for _i in range(<<<FRAMES>>>)]
+        jobs = [(_frame, _idx, tmpdir) for _idx, _frame in enumerate(frames)]
         with multiprocessing.Pool(n_workers) as pool:
             paths = list(pool.imap(_render_one, jobs, chunksize=chunk))
         paths.sort()
         print(f"  Stitching {len(paths)} frames...")
-        _save_output(paths, _OUT_FILE, _FPS, _INTERVAL)
+        _save_output(paths, _OUT_FILE, _FPS, _INTERVAL, _LOOP)
         print("  Saved ->", _OUT_FILE)
     finally:
         shutil.rmtree(tmpdir, ignore_errors=True)
@@ -507,72 +499,108 @@ if __name__ == "__main__":
 '''
 
 
+def _check_ffmpeg():
+    """Return True if ffmpeg is available on PATH."""
+    return shutil.which("ffmpeg") is not None
+
+
+def _normalize_var_range(var, range_str):
+    """Normalize var and range_str to lists. Accepts str or list[str]."""
+    if isinstance(var, str):
+        var = [var]
+    if isinstance(range_str, str):
+        range_str = [range_str]
+    return list(var), list(range_str)
+
+
 # -- Main animate function --
 def animate(src, var="t", range_str="0,1", frames=120, fps=25,
-            workers=0, dpi=100, out=None, fmt="gif", source_name="<script>"):
+            workers=0, dpi=100, out=None, fmt="gif", loop=0,
+            reverse=False, ping_pong=False, source_name="<script>"):
     """Convert a static matplotlib script source to an animated script.
 
     Args:
         src: Source code of the static matplotlib script.
-        var: Variable name to animate.
-        range_str: "start,end" range (math expressions OK, e.g. "0,2*pi").
+        var: Variable name(s) to animate. str or list[str].
+        range_str: "start,end" range per variable. str or list[str].
+            Each entry can use math expressions, e.g. "0,2*pi".
         frames: Number of animation frames.
         fps: Frames per second.
         workers: Parallel workers (0 = auto = cpu_count).
         dpi: DPI for rendered frames.
-        out: Output filename (None = auto from source_name). Extension
-             overrides fmt if provided.
+        out: Output filename (None = auto from source_name).
         fmt: Output format: "gif" (default) or "mp4" (requires ffmpeg).
+        loop: GIF loop count (0 = loop forever, 1 = play once, N = N times).
+        reverse: If True, sweep each range end -> start instead of start -> end.
+        ping_pong: If True, play forward then backward for smooth looping.
         source_name: Name of the source script (for messages/docstring).
 
     Returns:
         Generated Python script as a string.
-
-    Raises:
-        SyntaxError: If src is not valid Python.
-        ValueError: If the animation variable is not found in the script.
     """
-    # -- Validate input --
     assert isinstance(src, str) and len(src.strip()) > 0, \
         "Source code must be a non-empty string"
-    assert isinstance(var, str) and var.isidentifier(), \
-        f"Variable name must be a valid identifier, got {var!r}"
     assert frames > 0, f"frames must be positive, got {frames}"
     assert fps > 0, f"fps must be positive, got {fps}"
     assert dpi > 0, f"dpi must be positive, got {dpi}"
     assert fmt in ("gif", "mp4"), f"fmt must be 'gif' or 'mp4', got {fmt!r}"
+    assert isinstance(loop, int) and loop >= 0, \
+        f"loop must be a non-negative integer, got {loop!r}"
 
-    # Parse range -- strip whitespace so "0, 2*pi" works as well as "0,2*pi"
-    parts = range_str.split(",")
-    assert len(parts) == 2, \
-        f"Range must be 'start,end', got {range_str!r}"
-    start_val = parse_val(parts[0].strip())
-    end_val = parse_val(parts[1].strip())
-    assert start_val != end_val, \
-        f"Range start and end must differ, got {start_val}"
+    # -- Normalize var / range_str to lists --
+    vars_list, ranges_list = _normalize_var_range(var, range_str)
 
-    step = (end_val - start_val) / frames
-    # Determine output filename: explicit --out overrides, otherwise auto from fmt
+    assert len(vars_list) >= 1, "At least one variable must be provided"
+    assert len(vars_list) == len(ranges_list), (
+        f"len(var) ({len(vars_list)}) != len(range_str) ({len(ranges_list)}): "
+        f"each variable needs exactly one range"
+    )
+    assert len(set(vars_list)) == len(vars_list), \
+        f"Duplicate variable names: {vars_list}"
+    for v in vars_list:
+        assert isinstance(v, str) and v.isidentifier(), \
+            f"Variable name must be a valid identifier, got {v!r}"
+
+    # Parse all ranges
+    range_pairs = []
+    for rs in ranges_list:
+        parts = rs.split(",")
+        assert len(parts) == 2, f"Range must be 'start,end', got {rs!r}"
+        s = parse_val(parts[0].strip())
+        e = parse_val(parts[1].strip())
+        assert s != e, f"Range start and end must differ, got {s}"
+        range_pairs.append((s, e))
+
+    if reverse:
+        range_pairs = [(e, s) for s, e in range_pairs]
+
+    steps = [(e - s) / frames for s, e in range_pairs]
+
+    if fmt == "mp4" and not _check_ffmpeg():
+        warnings.warn(
+            "ffmpeg not found on PATH. The generated script will fail when run. "
+            "Install ffmpeg: https://ffmpeg.org/download.html",
+            stacklevel=2,
+        )
+
     if out:
         out_file = out
-        # Infer fmt from explicit extension if given
         if out_file.endswith(".mp4"):
             fmt = "mp4"
         elif out_file.endswith(".gif"):
             fmt = "gif"
     else:
         out_file = Path(source_name).stem + f"_animated.{fmt}"
-    interval = 1000 // fps  # ms per frame
+    interval = 1000 // fps
 
     # -- Phase 1: AST scan --
     tree, info = scan_ast(src)
 
-    # Validate the animation variable exists
-    assert var in info.all_names, \
-        f"Variable {var!r} not found in script. Available names: " \
-        f"{sorted(info.all_names)}"
+    for v in vars_list:
+        assert v in info.all_names, \
+            f"Variable {v!r} not found in script. Available names: " \
+            f"{sorted(info.all_names)}"
 
-    # Warnings for unusual cases
     if info.fig_node is None:
         warnings.warn(
             "No explicit figure creation found (plt.subplots, plt.figure, etc.). "
@@ -588,11 +616,11 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         )
 
     # -- Phase 2: Dependency tracking --
-    dep_vars = build_deps(tree, var)
+    dep_vars = build_deps(tree, vars_list)
 
     # -- Phase 3: Partition --
     static_stmts, dynamic_stmts, plot_stmts = partition(
-        src, tree, info, dep_vars, var
+        src, tree, info, dep_vars, vars_list
     )
 
     # -- Phase 4: Axes clearing --
@@ -604,8 +632,6 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     # -- Phase 6: Build sections --
     static_block = "\n".join(final_static)
 
-    # For 3D plots, include figure creation in the update body.
-    # Collect 3D axes info in one pass to avoid iterating ax_info multiple times.
     has_3d = False
     ax_3d_sources = []
     ax_3d_vars = {"fig"}
@@ -620,43 +646,51 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     global_decl = ""
     if has_3d and info.fig_node is not None:
         fig_source = _get_stmt_source(src, info.fig_node)
-        # After fig.clear() the old axes objects are invalid, so we also re-run
-        # each axes creation statement (ax = fig.add_subplot(...)) inside update().
         fig_recreation = (
             _ind("fig.clear()") + "\n"
             + _ind(fig_source) + "\n"
             + (_ind(ax_3d_sources) + "\n" if ax_3d_sources else "")
         )
-        # Declare fig and all axes variables as global. Without this Python sees
-        # the assignments inside update() and treats them as locals, causing
-        # UnboundLocalError on fig.clear() before any assignment has happened.
         global_decl = _ind(f"global {', '.join(sorted(ax_3d_vars))}") + "\n"
 
-    # update() body
+    # One assignment line per animated variable
+    var_assignments = "\n".join(
+        f"    {v} = {s!r} + _frame * {step!r}"
+        for v, (s, _e), step in zip(vars_list, range_pairs, steps)
+    )
+
     update_body = (
-        f"    {var} = {start_val!r} + _frame * {step!r}\n"
+        var_assignments + "\n"
         + global_decl
         + (_ind(dynamic_stmts) + "\n" if dynamic_stmts else "")
         + (fig_recreation if has_3d else (_ind(clear) + "\n"))
         + _ind(plot_stmts)
     )
 
-    # worker body: re-create fig inside worker process
+    # Worker receives (_frame, _idx, _tmpdir) -- use _frame for data, _idx for filename
+    var_assignments_worker = "\n".join(
+        f"    {v} = {s!r} + _frame * {step!r}"
+        for v, (s, _e), step in zip(vars_list, range_pairs, steps)
+    )
     worker_body = (
         _ind(final_static, 4) + "\n"
-        + f"    {var} = {start_val!r} + _frame * {step!r}\n"
+        + var_assignments_worker + "\n"
         + (_ind(dynamic_stmts, 4) + "\n" if dynamic_stmts else "")
         + _ind(plot_stmts, 4)
     )
+
+    # Docstring summary: single var uses classic form, multi-var lists all
+    if len(vars_list) == 1:
+        var_summary = f"{vars_list[0]} sweeps {range_pairs[0][0]!r} -> {range_pairs[0][1]!r}"
+    else:
+        parts_summary = [f"{v}({s!r}->{e!r})" for v, (s, e) in zip(vars_list, range_pairs)]
+        var_summary = "vars: " + ", ".join(parts_summary)
 
     # -- Phase 7: Assemble --
     result = (TEMPLATE
         .replace("<<<SOURCE>>>",      source_name)
         .replace("<<<STATIC>>>",      static_block)
-        .replace("<<<VAR>>>",         var)
-        .replace("<<<START>>>",       repr(start_val))
-        .replace("<<<END>>>",         repr(end_val))
-        .replace("<<<STEP>>>",        repr(step))
+        .replace("<<<VAR_SUMMARY>>>", var_summary)
         .replace("<<<UPDATE_BODY>>>", update_body)
         .replace("<<<WORKER_BODY>>>", worker_body)
         .replace("<<<FRAMES>>>",      str(frames))
@@ -666,7 +700,8 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         .replace("<<<DPI>>>",         str(dpi))
         .replace("<<<WORKERS>>>",     str(workers))
         .replace("<<<HAS_3D>>>",      str(has_3d))
-        .replace("<<<PIL_IMPORT>>>",  "from PIL import Image" if fmt == "gif" else "")
+        .replace("<<<LOOP>>>",        str(loop))
+        .replace("<<<PING_PONG>>>",   str(ping_pong))
     )
 
     return result
@@ -679,15 +714,20 @@ def main():
     p = argparse.ArgumentParser(
         description="Convert a static matplotlib script to an animation."
     )
-    p.add_argument("script", help="Input matplotlib script to animate")
-    p.add_argument("--var",     default="t",   help="Variable to animate (default: t)")
-    p.add_argument("--range",   default="0,1", help="start,end (math ok: 2*pi)")
-    p.add_argument("--frames",  default=120,   type=int, help="Number of frames")
-    p.add_argument("--fps",     default=25,    type=int, help="Frames per second")
-    p.add_argument("--workers", default=0,     type=int, help="0=auto=cpu_count")
-    p.add_argument("--dpi",     default=100,   type=int, help="DPI for output")
-    p.add_argument("--out",     default=None,  help="Output filename (default: <script>_animated.gif/mp4)")
-    p.add_argument("--format",  default="gif", choices=["gif", "mp4"], help="Output format (default: gif)")
+    p.add_argument("script",           help="Input matplotlib script to animate")
+    p.add_argument("--var",   nargs="+", default=["t"],       metavar="VAR",
+                   help="Variable(s) to animate, e.g. --var t  or  --var t alpha")
+    p.add_argument("--range", nargs="+", default=["0,1"],    metavar="RANGE",
+                   help="start,end per variable, e.g. --range 0,2*pi  or  --range 0,6.28 0,1")
+    p.add_argument("--frames",         default=120,    type=int, help="Number of frames")
+    p.add_argument("--fps",            default=25,     type=int, help="Frames per second")
+    p.add_argument("--workers",        default=0,      type=int, help="0=auto=cpu_count")
+    p.add_argument("--dpi",            default=100,    type=int, help="DPI for output")
+    p.add_argument("--out",            default=None,   help="Output filename")
+    p.add_argument("--format",         default="gif",  choices=["gif", "mp4"], help="Output format (default: gif)")
+    p.add_argument("--loop",           default=0,      type=int, help="GIF loop count (0=forever, default: 0)")
+    p.add_argument("--reverse",        action="store_true", help="Sweep range end->start")
+    p.add_argument("--ping-pong",      action="store_true", help="Play forward then backward")
     args = p.parse_args()
 
     try:
@@ -699,17 +739,24 @@ def main():
     except UnicodeDecodeError:
         p.error(f"Could not read {args.script} as UTF-8 text")
 
+    # Unwrap single-element lists for backward-compat display
+    var_arg   = args.var[0]   if len(args.var)   == 1 else args.var
+    range_arg = args.range[0] if len(args.range) == 1 else args.range
+
     try:
         result = animate(
             src,
-            var=args.var,
-            range_str=args.range,
+            var=var_arg,
+            range_str=range_arg,
             frames=args.frames,
             fps=args.fps,
             workers=args.workers,
             dpi=args.dpi,
             out=args.out,
             fmt=args.format,
+            loop=args.loop,
+            reverse=args.reverse,
+            ping_pong=args.ping_pong,
             source_name=args.script,
         )
     except (AssertionError, ValueError) as exc:
@@ -717,8 +764,11 @@ def main():
 
     out_script = Path(args.script).stem + "_animated.py"
     Path(out_script).write_text(result, encoding="utf-8")
+    var_display = ", ".join(args.var)
     print(f"Written  -> {out_script}")
-    print(f"   Variable : {args.var}")
+    print(f"   Variables: {var_display}")
+    print(f"   Format   : {args.format}{' (ping-pong)' if args.ping_pong else ''}{' (reversed)' if args.reverse else ''}")
+    print(f"   Loop     : {'forever' if args.loop == 0 else args.loop}")
     print(f"   Workers  : {args.workers or 'auto (cpu_count)'}")
     print(f"   Run      : python {out_script}")
     print(f"   Seq only : python {out_script} --sequential")

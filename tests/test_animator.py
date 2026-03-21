@@ -21,6 +21,7 @@ from mpl_animator import (
     scan_ast,
     _inject_agg,
     _gen_clear_lines,
+    _normalize_var_range,
 )
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -713,6 +714,10 @@ FIXTURE_CONFIGS = {
     "dashboard_4panel.py":    {"var": "t",     "range_str": "0.5,3"},
     "changing_text.py":       {"var": "t",     "range_str": "0,6.28"},
     "mixed_3d_2d.py":         {"var": "t",     "range_str": "0,6.28"},
+    # multi-variable fixtures
+    "camera_cinematic.py":    {"var": ["azim", "elev"],  "range_str": ["0,360", "20,60"]},
+    "multi_var_2d.py":        {"var": ["freq", "amp"],   "range_str": ["1,5", "0.3,1.5"]},
+    "zoom_and_rotate.py":     {"var": ["azim", "zoom"],  "range_str": ["0,360", "0.5,1.5"]},
 }
 
 
@@ -898,6 +903,193 @@ class TestSlowExecution:
         gif_path = tmp_path / gif_name
         assert gif_path.exists() and gif_path.stat().st_size > 0
 
+        import shutil
+        out_dir = os.path.join(os.path.dirname(__file__), "output")
+        os.makedirs(out_dir, exist_ok=True)
+        shutil.copy(gif_path, os.path.join(out_dir, gif_name))
+
+
+# ===============================================================
+# TestMultiVar - multi-variable animation support
+# ===============================================================
+class TestMultiVar:
+    SIMPLE_SRC = textwrap.dedent("""\
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        freq = 1.0
+        amp  = 1.0
+        x = np.linspace(0, 2 * np.pi, 200)
+        y = amp * np.sin(freq * x)
+
+        fig, ax = plt.subplots()
+        ax.plot(x, y, lw=2)
+        ax.set_ylim(-2, 2)
+        ax.set_title(f'freq={freq:.2f} amp={amp:.2f}')
+        plt.tight_layout()
+        plt.show()
+    """)
+
+    # -- _normalize_var_range --
+    def test_normalize_single_str(self):
+        v, r = _normalize_var_range("t", "0,1")
+        assert v == ["t"]
+        assert r == ["0,1"]
+
+    def test_normalize_list(self):
+        v, r = _normalize_var_range(["freq", "amp"], ["1,5", "0.3,1.5"])
+        assert v == ["freq", "amp"]
+        assert r == ["1,5", "0.3,1.5"]
+
+    def test_normalize_mixed_str_list(self):
+        """Single str var, list range (edge case)."""
+        v, r = _normalize_var_range("t", ["0,1"])
+        assert v == ["t"]
+        assert r == ["0,1"]
+
+    # -- animate() validation --
+    def test_mismatched_var_range_raises(self):
+        with pytest.raises(AssertionError, match="each variable needs exactly one range"):
+            animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str="1,5")
+
+    def test_duplicate_vars_raises(self):
+        with pytest.raises(AssertionError, match="Duplicate variable names"):
+            animate(self.SIMPLE_SRC, var=["freq", "freq"], range_str=["1,5", "1,5"])
+
+    def test_unknown_var_raises(self):
+        with pytest.raises(AssertionError, match="not found in script"):
+            animate(self.SIMPLE_SRC, var=["freq", "nonexistent"], range_str=["1,5", "0,1"])
+
+    def test_single_var_backward_compat(self):
+        """Passing a single str still works exactly as before."""
+        result = animate(self.SIMPLE_SRC, var="freq", range_str="1,5")
+        assert "def update(_frame):" in result
+        assert "freq = " in result
+
+    # -- generated code structure --
+    def test_two_vars_both_assigned_in_update(self):
+        result = animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"])
+        update_section = result.split("def update(_frame):")[1].split("def _render_one")[0]
+        assert "freq = " in update_section
+        assert "amp = " in update_section
+
+    def test_two_vars_both_assigned_in_worker(self):
+        result = animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"])
+        worker_section = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
+        assert "freq = " in worker_section
+        assert "amp = " in worker_section
+
+    def test_var_summary_single(self):
+        result = animate(self.SIMPLE_SRC, var="freq", range_str="1,5")
+        assert "freq sweeps" in result
+
+    def test_var_summary_multi(self):
+        result = animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"])
+        assert "vars:" in result
+        assert "freq" in result
+        assert "amp" in result
+
+    def test_original_var_assignment_skipped(self):
+        """Static freq=1.0 and amp=1.0 must not appear in static/dynamic sections."""
+        src = self.SIMPLE_SRC
+        tree, info = scan_ast(src)
+        deps = build_deps(tree, ["freq", "amp"])
+        static, dynamic, _ = partition(src, tree, info, deps, ["freq", "amp"])
+        combined = "\n".join(static + dynamic)
+        assert "freq = 1.0" not in combined
+        assert "amp  = 1.0" not in combined
+
+    def test_generated_script_is_valid_python(self):
+        result = animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"])
+        try:
+            ast.parse(result)
+        except SyntaxError as exc:
+            pytest.fail(f"Generated script has syntax error: {exc}\n\n{result}")
+
+    def test_step_values_are_correct(self):
+        """Each variable's step should equal (end-start)/frames."""
+        result = animate(self.SIMPLE_SRC, var=["freq", "amp"],
+                         range_str=["1,5", "0.3,1.5"], frames=100)
+        freq_step = (5.0 - 1.0) / 100
+        amp_step  = (1.5 - 0.3) / 100
+        assert repr(freq_step) in result
+        assert repr(amp_step)  in result
+
+    def test_build_deps_multi_var(self):
+        tree, _ = scan_ast(self.SIMPLE_SRC)
+        deps = build_deps(tree, ["freq", "amp"])
+        assert "y" in deps  # y depends on both freq and amp
+
+    def test_partition_skips_both_static_assignments(self):
+        tree, info = scan_ast(self.SIMPLE_SRC)
+        deps = build_deps(tree, ["freq", "amp"])
+        static, dynamic, _ = partition(self.SIMPLE_SRC, tree, info, deps, ["freq", "amp"])
+        combined = "\n".join(static + dynamic)
+        assert "freq = 1.0" not in combined
+        assert "amp  = 1.0" not in combined
+
+    # -- fixture-based end-to-end --
+    def test_multi_var_2d_generates_valid_python(self):
+        src = _read_fixture("multi_var_2d.py")
+        result = animate(src, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"], frames=10)
+        ast.parse(result)
+        update_sec = result.split("def update(_frame):")[1].split("def _render_one")[0]
+        assert "freq = " in update_sec
+        assert "amp = " in update_sec
+
+    def test_camera_cinematic_generates_valid_python(self):
+        src = _read_fixture("camera_cinematic.py")
+        result = animate(src, var=["azim", "elev"], range_str=["0,360", "20,60"], frames=10)
+        ast.parse(result)
+        update_sec = result.split("def update(_frame):")[1].split("def _render_one")[0]
+        assert "azim = " in update_sec
+        assert "elev = " in update_sec
+
+    def test_zoom_and_rotate_generates_valid_python(self):
+        src = _read_fixture("zoom_and_rotate.py")
+        result = animate(src, var=["azim", "zoom"], range_str=["0,360", "0.5,1.5"], frames=10)
+        ast.parse(result)
+        update_sec = result.split("def update(_frame):")[1].split("def _render_one")[0]
+        assert "azim = " in update_sec
+        assert "zoom = " in update_sec
+
+    @pytest.mark.slow
+    def test_multi_var_2d_produces_gif(self, tmp_path):
+        """Run multi_var_2d fixture end-to-end and verify a GIF is created."""
+        src = _read_fixture("multi_var_2d.py")
+        gif_name = "multi_var_2d_animated.gif"
+        result = animate(src, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"],
+                         frames=6, fps=6, out=gif_name, workers=1)
+        script_path = tmp_path / "mv2d.py"
+        script_path.write_text(result)
+        proc = subprocess.run(
+            [sys.executable, str(script_path), "--sequential"],
+            capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
+        )
+        assert proc.returncode == 0, f"multi_var_2d failed:\n{proc.stderr}"
+        gif_path = tmp_path / gif_name
+        assert gif_path.exists() and gif_path.stat().st_size > 0
+        import shutil
+        out_dir = os.path.join(os.path.dirname(__file__), "output")
+        os.makedirs(out_dir, exist_ok=True)
+        shutil.copy(gif_path, os.path.join(out_dir, gif_name))
+
+    @pytest.mark.slow
+    def test_camera_cinematic_produces_gif(self, tmp_path):
+        """Run camera_cinematic fixture (3D, 2 vars) end-to-end."""
+        src = _read_fixture("camera_cinematic.py")
+        gif_name = "camera_cinematic_animated.gif"
+        result = animate(src, var=["azim", "elev"], range_str=["0,360", "20,60"],
+                         frames=6, fps=6, out=gif_name, workers=1)
+        script_path = tmp_path / "cam.py"
+        script_path.write_text(result)
+        proc = subprocess.run(
+            [sys.executable, str(script_path), "--sequential"],
+            capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
+        )
+        assert proc.returncode == 0, f"camera_cinematic failed:\n{proc.stderr}"
+        gif_path = tmp_path / gif_name
+        assert gif_path.exists() and gif_path.stat().st_size > 0
         import shutil
         out_dir = os.path.join(os.path.dirname(__file__), "output")
         os.makedirs(out_dir, exist_ok=True)

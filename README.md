@@ -5,9 +5,13 @@ Turn any static matplotlib script into an animated GIF or MP4 by sweeping a vari
 ## Features
 
 - **Zero boilerplate** - point it at an existing script, it figures out the rest
-- **AST-based dependency tracking** - automatically identifies which variables and calculations need to update each frame
+- **Multi-variable animation** - sweep multiple variables simultaneously with `--var azim spin elev --range "0,360" "0,6.28" "20,40"`; all variables share the same frame clock, each advances independently
+- **AST-based dependency tracking** - automatically identifies which variables and calculations need to update each frame, across all animated variables
 - **Parallel rendering** - renders frames across all CPU cores via `multiprocessing`, falls back to sequential automatically
 - **GIF and MP4 output** - export as animated GIF (Pillow) or MP4 (ffmpeg); just add `--format mp4`
+- **Loop control** - `--loop 0` (forever, default), `--loop 1` (play once), `--loop N`
+- **Ping-pong** - `--ping-pong` plays forward then reversed for seamless looping GIFs
+- **Reverse** - `--reverse` sweeps each range end → start
 - **Axis rotation** - animate `azim` with `ax.view_init` to rotate 3D plots; animate `angle` with `ax.set_theta_offset` to spin polar plots
 - **Math expressions in ranges** - `--range "0,2*pi"` just works
 - **2D, 3D, and polar plots** - handles `plot_surface`, `scatter3D`, subplots, polar axes, and more
@@ -43,6 +47,12 @@ mpl-animator plot.py --var t --range "0,2*pi" --frames 60 --fps 30
 
 # Rotate a 3D plot by animating the camera azimuth
 mpl-animator my_3d_plot.py --var azim --range "0,360" --frames 72 --fps 20
+
+# Multi-variable: camera orbits (azim) while the object spins (spin) and camera rises (elev)
+mpl-animator orbit_static.py --var azim spin elev --range "0,360" "0,6.28" "20,40" --frames 90 --fps 25 --ping-pong
+
+# Ping-pong loop (plays forward then reversed — great for seamless GIFs)
+mpl-animator plot.py --var t --range "0,1" --frames 60 --ping-pong
 
 # Control output quality and parallelism
 mpl-animator plot.py --var alpha --range "0,1" --dpi 150 --workers 8
@@ -127,6 +137,45 @@ For 3D plots the animator calls `fig.clear()` and recreates the axes each frame 
 
 ---
 
+---
+
+### Example 3 - Cinematic 3D orbit (multi-variable)
+
+`orbit_static.py` draws a torus knot for fixed camera position and object rotation:
+
+```python
+# orbit_static.py  (key lines)
+azim = 45.0          # camera azimuth in degrees      <- animated
+spin = 0.0           # object self-rotation (radians) <- animated
+elev = 20.0          # camera elevation in degrees    <- animated
+
+# Object geometry: rotate the knot around its own Z axis
+cx_rot = cx * np.cos(spin) - cy * np.sin(spin)
+cy_rot = cx * np.sin(spin) + cy * np.cos(spin)
+
+fig = plt.figure(figsize=(7, 7))
+ax  = fig.add_subplot(111, projection='3d')
+ax.plot_surface(xs, ys, zs, cmap='plasma', alpha=0.92)
+ax.view_init(elev=elev, azim=azim)   # <- camera controlled by both azim and elev
+plt.show()
+```
+
+All three variables sweep simultaneously from the same frame clock — the camera orbits a full 360°, the object spins one full turn, and the camera gently cranes upward. `--ping-pong` plays the sequence forward then reversed for a seamless loop:
+
+```bash
+python mpl_animator.py examples/orbit_static.py \
+    --var azim spin elev \
+    --range "0,360" "0,6.28318" "20,40" \
+    --frames 90 --fps 25 --dpi 120 --ping-pong
+python orbit_static_animated.py --sequential
+```
+
+The animator identifies that `cx_rot`, `cy_rot`, and the tube surface `xs`/`ys`/`zs` all depend on `spin`, and that `ax.view_init` depends on `azim` and `elev` — all three dependency chains are tracked and placed in `update()` automatically.
+
+![orbit animation](https://raw.githubusercontent.com/BasemRajjoub/mpl_animator/main/examples/orbit_static_animated.gif)
+
+---
+
 ## How it works
 
 1. Parses your script's AST to find which variables depend on the animated one
@@ -139,11 +188,24 @@ For 3D plots the animator calls `fig.clear()` and recreates the axes each frame 
 from mpl_animator import animate
 
 src = open("my_plot.py").read()
+
+# Single variable
 animated_code = animate(src, var="t", range_str="0,6.28", frames=60, fps=25)
 open("my_plot_animated.py", "w").write(animated_code)
 
+# Multiple variables — pass lists of equal length
+animated_code = animate(
+    src,
+    var=["azim", "spin", "elev"],
+    range_str=["0,360", "0,6.28", "20,40"],
+    frames=90, fps=25, ping_pong=True,
+)
+
 # Export as MP4
 animated_code = animate(src, var="t", range_str="0,6.28", fmt="mp4")
+
+# Ping-pong loop (seamless forward+reverse)
+animated_code = animate(src, var="t", range_str="0,1", ping_pong=True, loop=0)
 ```
 
 ## Supported plot types
