@@ -6,6 +6,7 @@ Turn any static matplotlib script into an animated GIF or MP4 by sweeping a vari
 
 - **Zero boilerplate** - point it at an existing script, it figures out the rest
 - **Multi-variable animation** - sweep multiple variables simultaneously with `--var azim spin elev --range "0,360" "0,6.28" "20,40"`; all variables share the same frame clock, each advances independently
+- **Explicit value lists** - animate over any discrete set of values with `--values "1,5,10,50,100"` instead of a linear range; frame count is inferred automatically
 - **AST-based dependency tracking** - automatically identifies which variables and calculations need to update each frame, across all animated variables
 - **Parallel rendering** - renders frames across all CPU cores via `multiprocessing`, falls back to sequential automatically
 - **GIF and MP4 output** - export as animated GIF (Pillow) or MP4 (ffmpeg); just add `--format mp4`
@@ -60,6 +61,12 @@ mpl-animator plot.py --var alpha --range "0,1" --dpi 150 --workers 8
 
 # Custom output filename
 mpl-animator plot.py --var t --range "0,1" --out my_animation.gif
+
+# Explicit values: animate over specific discrete values (frame count = len(values))
+mpl-animator plot.py --var n --values "5,10,50,200,1000"
+
+# Multi-variable explicit values: one comma-separated list per variable
+mpl-animator plot.py --var a b --values "1,2,5,10" "0.1,0.5,1.0,2.0"
 ```
 
 This generates a `<script>_animated.py` file. Run it to produce the output:
@@ -204,6 +211,13 @@ animated_code = animate(
 
 # Export as MP4
 animated_code = animate(src, var="t", range_str="0,6.28", fmt="mp4")
+
+# Explicit values: animate over a specific set of values (frame count is inferred)
+animated_code = animate(src, var="n", values="5,10,50,200,1000")
+animated_code = animate(src, var="n", values=[5, 10, 50, 200, 1000])
+
+# Multi-variable explicit values
+animated_code = animate(src, var=["a", "b"], values=["1,2,5,10", "0.1,0.5,1.0,2.0"])
 
 # Ping-pong loop (seamless forward+reverse)
 animated_code = animate(src, var="t", range_str="0,1", ping_pong=True, loop=0)

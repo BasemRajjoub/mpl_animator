@@ -535,10 +535,36 @@ def _normalize_var_range(var, range_str):
     return list(var), list(range_str)
 
 
+def _normalize_values(values):
+    """Normalize values to list[list[float]].
+
+    Accepts:
+      - "1,5,10,50"            -> [[1, 5, 10, 50]]
+      - [1, 5, 10, 50]         -> [[1, 5, 10, 50]]
+      - ["1,5,10", "0,1,2"]    -> [[1, 5, 10], [0, 1, 2]]
+      - [[1,5,10], [0,1,2]]    -> [[1, 5, 10], [0, 1, 2]]
+    """
+    # Wrap single string/list into outer list
+    if isinstance(values, str):
+        values = [values]
+    elif isinstance(values, (list, tuple)) and values and not isinstance(values[0], (list, tuple, str)):
+        # flat list of numbers e.g. [1, 5, 10]
+        values = [values]
+
+    result = []
+    for v in values:
+        if isinstance(v, str):
+            result.append([parse_val(x.strip()) for x in v.split(",")])
+        else:
+            result.append([float(x) for x in v])
+    return result
+
+
 # -- Main animate function --
 def animate(src, var="t", range_str="0,1", frames=120, fps=25,
             workers=0, dpi=100, out=None, fmt="gif", loop=0,
-            reverse=False, ping_pong=False, source_name="<script>"):
+            reverse=False, ping_pong=False, source_name="<script>",
+            values=None):
     """Convert a static matplotlib script source to an animated script.
 
     Args:
@@ -546,7 +572,9 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         var: Variable name(s) to animate. str or list[str].
         range_str: "start,end" range per variable. str or list[str].
             Each entry can use math expressions, e.g. "0,2*pi".
-        frames: Number of animation frames.
+            Ignored when *values* is provided.
+        frames: Number of animation frames. Ignored when *values* is provided
+            (frame count is taken from the length of the values list).
         fps: Frames per second.
         workers: Parallel workers (0 = auto = cpu_count).
         dpi: DPI for rendered frames.
@@ -554,49 +582,78 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         fmt: Output format: "gif" (default) or "mp4" (requires ffmpeg).
         loop: GIF loop count (0 = loop forever, 1 = play once, N = N times).
         reverse: If True, sweep each range end -> start instead of start -> end.
+            Only applies when *range_str* is used.
         ping_pong: If True, play forward then backward for smooth looping.
         source_name: Name of the source script (for messages/docstring).
+        values: Explicit list of values to animate over instead of a linear
+            range. Accepts many forms:
+              - "1,5,10,50"            single variable, comma-separated string
+              - [1, 5, 10, 50]         single variable, list of numbers
+              - ["1,5,10", "0,1,2"]    two variables, comma-separated strings
+              - [[1,5,10], [0,1,2]]    two variables, lists of numbers
+            When given, *range_str*, *frames*, and *reverse* are all ignored.
+            Each per-variable list must have the same length.
 
     Returns:
         Generated Python script as a string.
     """
     assert isinstance(src, str) and len(src.strip()) > 0, \
         "Source code must be a non-empty string"
-    assert frames > 0, f"frames must be positive, got {frames}"
     assert fps > 0, f"fps must be positive, got {fps}"
     assert dpi > 0, f"dpi must be positive, got {dpi}"
     assert fmt in ("gif", "mp4"), f"fmt must be 'gif' or 'mp4', got {fmt!r}"
     assert isinstance(loop, int) and loop >= 0, \
         f"loop must be a non-negative integer, got {loop!r}"
 
-    # -- Normalize var / range_str to lists --
-    vars_list, ranges_list = _normalize_var_range(var, range_str)
+    # -- Normalize var to list --
+    vars_list = [var] if isinstance(var, str) else list(var)
 
     assert len(vars_list) >= 1, "At least one variable must be provided"
-    assert len(vars_list) == len(ranges_list), (
-        f"len(var) ({len(vars_list)}) != len(range_str) ({len(ranges_list)}): "
-        f"each variable needs exactly one range"
-    )
     assert len(set(vars_list)) == len(vars_list), \
         f"Duplicate variable names: {vars_list}"
     for v in vars_list:
         assert isinstance(v, str) and v.isidentifier(), \
             f"Variable name must be a valid identifier, got {v!r}"
 
-    # Parse all ranges
-    range_pairs = []
-    for rs in ranges_list:
-        parts = rs.split(",")
-        assert len(parts) == 2, f"Range must be 'start,end', got {rs!r}"
-        s = parse_val(parts[0].strip())
-        e = parse_val(parts[1].strip())
-        assert s != e, f"Range start and end must differ, got {s}"
-        range_pairs.append((s, e))
-
-    if reverse:
-        range_pairs = [(e, s) for s, e in range_pairs]
-
-    steps = [(e - s) / frames for s, e in range_pairs]
+    # -- Determine frame values: explicit list or linear range --
+    use_values = values is not None
+    if use_values:
+        values_lists = _normalize_values(values)
+        assert len(values_lists) == len(vars_list), (
+            f"len(values) ({len(values_lists)}) != len(var) ({len(vars_list)}): "
+            f"each variable needs exactly one values list"
+        )
+        assert len(values_lists[0]) >= 2, \
+            f"values list must have at least 2 entries, got {len(values_lists[0])}"
+        n_vals = len(values_lists[0])
+        for i, vl in enumerate(values_lists):
+            assert len(vl) == n_vals, (
+                f"All values lists must have the same length; "
+                f"var[0] has {n_vals} but var[{i}] has {len(vl)}"
+            )
+        frames = n_vals  # frame count driven by values
+        range_pairs = None
+        steps = None
+    else:
+        assert frames > 0, f"frames must be positive, got {frames}"
+        # Normalize range_str to list
+        _, ranges_list = _normalize_var_range(var, range_str)
+        assert len(vars_list) == len(ranges_list), (
+            f"len(var) ({len(vars_list)}) != len(range_str) ({len(ranges_list)}): "
+            f"each variable needs exactly one range"
+        )
+        range_pairs = []
+        for rs in ranges_list:
+            parts = rs.split(",")
+            assert len(parts) == 2, f"Range must be 'start,end', got {rs!r}"
+            s = parse_val(parts[0].strip())
+            e = parse_val(parts[1].strip())
+            assert s != e, f"Range start and end must differ, got {s}"
+            range_pairs.append((s, e))
+        if reverse:
+            range_pairs = [(e, s) for s, e in range_pairs]
+        steps = [(e - s) / frames for s, e in range_pairs]
+        values_lists = None
 
     if fmt == "mp4" and not _check_ffmpeg():
         warnings.warn(
@@ -703,14 +760,35 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
 
     # One assignment line per animated variable
     # Variables that were originally int literals are cast back to int
-    def _var_assign(v, s, step):
+    def _var_assign_range(v, s, step):
         expr = f"{s!r} + _frame * {step!r}"
         return f"    {v} = int({expr})" if v in int_vars else f"    {v} = {expr}"
 
-    var_assignments = "\n".join(
-        _var_assign(v, s, step)
-        for v, (s, _e), step in zip(vars_list, range_pairs, steps)
-    )
+    def _var_assign_values(v, vals):
+        name = f"_VALUES_{v}"
+        cast = "int" if v in int_vars else None
+        if cast:
+            return f"    {v} = int({name}[_frame])"
+        return f"    {v} = {name}[_frame]"
+
+    if use_values:
+        # Emit _VALUES_<var> = [...] as module-level constants.
+        # Append to both static_block (for update()) and final_static (for worker).
+        values_decls = "\n".join(
+            f"_VALUES_{v} = {[float(x) for x in vals]!r}"
+            for v, vals in zip(vars_list, values_lists)
+        )
+        static_block = static_block + "\n" + values_decls
+        final_static.append(values_decls)
+        var_assignments = "\n".join(
+            _var_assign_values(v, vals)
+            for v, vals in zip(vars_list, values_lists)
+        )
+    else:
+        var_assignments = "\n".join(
+            _var_assign_range(v, s, step)
+            for v, (s, _e), step in zip(vars_list, range_pairs, steps)
+        )
 
     update_body = (
         var_assignments + "\n"
@@ -721,10 +799,16 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     )
 
     # Worker receives (_frame, _idx, _tmpdir) -- use _frame for data, _idx for filename
-    var_assignments_worker = "\n".join(
-        _var_assign(v, s, step)
-        for v, (s, _e), step in zip(vars_list, range_pairs, steps)
-    )
+    if use_values:
+        var_assignments_worker = "\n".join(
+            _var_assign_values(v, vals)
+            for v, vals in zip(vars_list, values_lists)
+        )
+    else:
+        var_assignments_worker = "\n".join(
+            _var_assign_range(v, s, step)
+            for v, (s, _e), step in zip(vars_list, range_pairs, steps)
+        )
     worker_body = (
         _ind(final_static, 4) + "\n"
         + var_assignments_worker + "\n"
@@ -733,7 +817,17 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     )
 
     # Docstring summary: single var uses classic form, multi-var lists all
-    if len(vars_list) == 1:
+    if use_values:
+        if len(vars_list) == 1:
+            vals = values_lists[0]
+            var_summary = f"{vars_list[0]} over {len(vals)} explicit values [{vals[0]!r}..{vals[-1]!r}]"
+        else:
+            parts_summary = [
+                f"{v}[{len(vl)} values]"
+                for v, vl in zip(vars_list, values_lists)
+            ]
+            var_summary = "vars: " + ", ".join(parts_summary)
+    elif len(vars_list) == 1:
         var_summary = f"{vars_list[0]} sweeps {range_pairs[0][0]!r} -> {range_pairs[0][1]!r}"
     else:
         parts_summary = [f"{v}({s!r}->{e!r})" for v, (s, e) in zip(vars_list, range_pairs)]
@@ -741,7 +835,7 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
 
     # -- Phase 7: Assemble --
     result = (TEMPLATE
-        .replace("<<<SOURCE>>>",      source_name)
+        .replace("<<<SOURCE>>>",      source_name.replace("\\", "/"))
         .replace("<<<STATIC>>>",      static_block)
         .replace("<<<VAR_SUMMARY>>>", var_summary)
         .replace("<<<UPDATE_BODY>>>", update_body)
@@ -772,6 +866,10 @@ def main():
                    help="Variable(s) to animate, e.g. --var t  or  --var t alpha")
     p.add_argument("--range", nargs="+", default=["0,1"],    metavar="RANGE",
                    help="start,end per variable, e.g. --range 0,2*pi  or  --range 0,6.28 0,1")
+    p.add_argument("--values", nargs="+", default=None,      metavar="VALUES",
+                   help="Explicit comma-separated values per variable instead of a linear range, "
+                        "e.g. --values 1,5,10,50  or  --values 1,5,10 0,1,2  "
+                        "Overrides --range and --frames.")
     p.add_argument("--frames",         default=120,    type=int, help="Number of frames")
     p.add_argument("--fps",            default=25,     type=int, help="Frames per second")
     p.add_argument("--workers",        default=0,      type=int, help="0=auto=cpu_count")
@@ -795,6 +893,7 @@ def main():
     # Unwrap single-element lists for backward-compat display
     var_arg   = args.var[0]   if len(args.var)   == 1 else args.var
     range_arg = args.range[0] if len(args.range) == 1 else args.range
+    values_arg = args.values[0] if (args.values and len(args.values) == 1) else args.values
 
     try:
         result = animate(
@@ -811,6 +910,7 @@ def main():
             reverse=args.reverse,
             ping_pong=args.ping_pong,
             source_name=args.script,
+            values=values_arg,
         )
     except (AssertionError, ValueError) as exc:
         p.error(str(exc))
@@ -820,6 +920,8 @@ def main():
     var_display = ", ".join(args.var)
     print(f"Written  -> {out_script}")
     print(f"   Variables: {var_display}")
+    if args.values:
+        print(f"   Values   : {', '.join(args.values)} (explicit)")
     print(f"   Format   : {args.format}{' (ping-pong)' if args.ping_pong else ''}{' (reversed)' if args.reverse else ''}")
     print(f"   Loop     : {'forever' if args.loop == 0 else args.loop}")
     print(f"   Workers  : {args.workers or 'auto (cpu_count)'}")

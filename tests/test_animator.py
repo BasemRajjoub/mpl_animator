@@ -22,6 +22,7 @@ from mpl_animator import (
     _inject_agg,
     _gen_clear_lines,
     _normalize_var_range,
+    _normalize_values,
 )
 
 FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
@@ -1450,3 +1451,149 @@ class TestEdgeCases:
         ast.parse(result)
         update_sec = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
         assert "flat" in update_sec
+
+
+# ===============================================================
+# TestExplicitValues - --values / values= feature
+# ===============================================================
+class TestExplicitValues:
+    """Tests for explicit values list animation mode."""
+
+    SIMPLE_SRC = textwrap.dedent("""\
+        import matplotlib.pyplot as plt
+        import numpy as np
+        n = 10
+        x = np.linspace(0, 1, n)
+        y = np.sin(np.pi * x)
+        fig, ax = plt.subplots()
+        ax.plot(x, y)
+        ax.set_title(f'n={n}')
+        plt.show()
+    """)
+
+    # -- _normalize_values unit tests --
+
+    def test_normalize_single_string(self):
+        assert _normalize_values("1,5,10") == [[1.0, 5.0, 10.0]]
+
+    def test_normalize_flat_list(self):
+        result = _normalize_values([1, 5, 10])
+        assert result == [[1.0, 5.0, 10.0]]
+
+    def test_normalize_list_of_strings(self):
+        result = _normalize_values(["1,5,10", "0,1,2"])
+        assert result == [[1.0, 5.0, 10.0], [0.0, 1.0, 2.0]]
+
+    def test_normalize_list_of_lists(self):
+        result = _normalize_values([[1, 5, 10], [0, 1, 2]])
+        assert result == [[1.0, 5.0, 10.0], [0.0, 1.0, 2.0]]
+
+    def test_normalize_math_expressions(self):
+        import math
+        result = _normalize_values("0,pi,2*pi")
+        assert result[0][0] == pytest.approx(0)
+        assert result[0][1] == pytest.approx(math.pi)
+        assert result[0][2] == pytest.approx(2 * math.pi)
+
+    # -- animate() integration tests --
+
+    def test_values_overrides_frames(self):
+        """Frame count must equal length of values list."""
+        result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
+        assert "_FRAMES   = 5" in result
+
+    def test_values_emits_values_list(self):
+        """_VALUES_<var> list must appear in generated code."""
+        result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
+        assert "_VALUES_n = " in result
+
+    def test_values_generates_valid_python(self):
+        result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
+        ast.parse(result)
+
+    def test_values_update_uses_index(self):
+        """update() must use _VALUES_n[_frame] not a linear formula."""
+        result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
+        update = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
+        assert "_VALUES_n[_frame]" in update
+        assert "* " not in update.split("_VALUES")[0]  # no linear step before values line
+
+    def test_values_int_var_cast(self):
+        """n was originally int literal, so must use int(_VALUES_n[_frame])."""
+        result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
+        assert "int(_VALUES_n[_frame])" in result
+
+    def test_values_float_var_no_cast(self):
+        """Float var must NOT add int() cast."""
+        src = textwrap.dedent("""\
+            import matplotlib.pyplot as plt
+            import numpy as np
+            alpha = 0.5
+            fig, ax = plt.subplots()
+            ax.plot([1,2,3], [1,2,3], alpha=alpha)
+            plt.show()
+        """)
+        result = animate(src, var="alpha", values="0.1,0.3,0.5,0.7,0.9", fps=10)
+        assert "int(_VALUES_alpha" not in result
+        assert "_VALUES_alpha[_frame]" in result
+
+    def test_values_backwards_compat_range_still_works(self):
+        """range_str path must still work when values is not given."""
+        result = animate(self.SIMPLE_SRC, var="n", range_str="5,100", frames=10, fps=10)
+        assert "_VALUES_n" not in result
+        assert "5" in result  # start value present as literal
+
+    def test_values_as_list_of_numbers(self):
+        result = animate(self.SIMPLE_SRC, var="n", values=[5, 10, 20, 50], fps=10)
+        ast.parse(result)
+        assert "_VALUES_n = " in result
+        assert "_FRAMES   = 4" in result
+
+    def test_values_validation_length_mismatch(self):
+        """Mismatched values list lengths must raise AssertionError."""
+        src = textwrap.dedent("""\
+            import matplotlib.pyplot as plt
+            import numpy as np
+            a = 1.0
+            b = 2.0
+            fig, ax = plt.subplots()
+            ax.plot([a, b], [a, b])
+            plt.show()
+        """)
+        with pytest.raises(AssertionError, match="same length"):
+            animate(src, var=["a", "b"], values=["1,2,3", "10,20"], fps=10)
+
+    def test_values_validation_too_few(self):
+        """Single-element values list must raise AssertionError."""
+        with pytest.raises(AssertionError, match="at least 2"):
+            animate(self.SIMPLE_SRC, var="n", values="5", fps=10)
+
+    def test_values_multivar(self):
+        """Multi-variable values mode generates both _VALUES_ lists."""
+        src = textwrap.dedent("""\
+            import matplotlib.pyplot as plt
+            import numpy as np
+            a = 1.0
+            b = 2.0
+            x = np.linspace(0, 1, 50)
+            y = a * x + b
+            fig, ax = plt.subplots()
+            ax.plot(x, y)
+            plt.show()
+        """)
+        result = animate(src, var=["a", "b"], values=["1,2,3", "10,20,30"], fps=10)
+        ast.parse(result)
+        assert "_VALUES_a = " in result
+        assert "_VALUES_b = " in result
+        assert "_FRAMES   = 3" in result
+
+    def test_values_wrong_var_count(self):
+        """Providing 2 values lists for a single var must raise AssertionError."""
+        with pytest.raises(AssertionError, match="len\(values\)"):
+            animate(self.SIMPLE_SRC, var="n", values=["5,10,20", "1,2,3"], fps=10)
+
+    def test_values_worker_body_uses_index(self):
+        """Parallel worker body must also use _VALUES_n[_frame]."""
+        result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
+        worker = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
+        assert "_VALUES_n[_frame]" in worker
