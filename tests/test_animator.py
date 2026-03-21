@@ -742,6 +742,17 @@ FIXTURE_CONFIGS = {
     "log_scale.py":           {"var": "t",  "range_str": "0.1,2"},
     "fill_between_where.py":  {"var": "t",  "range_str": "0.1,3"},
     "quiver_plot.py":         {"var": "t",  "range_str": "0.1,3"},
+    # real-world fixtures from matplotlib gallery
+    "real_world_01.py":       {"var": "freq",        "range_str": "1,10"},
+    "real_world_02.py":       {"var": "scale",       "range_str": "0.5,2"},
+    "real_world_03.py":       {"var": "error_scale", "range_str": "0.5,3"},
+    "real_world_04.py":       {"var": "width",       "range_str": "0.2,0.8"},
+    "real_world_05.py":       {"var": "delta",       "range_str": "0.01,0.1"},
+    "real_world_06.py":       {"var": "elev",        "range_str": "10,60"},
+    "real_world_07.py":       {"var": "alpha",       "range_str": "0.1,0.9"},
+    "real_world_08.py":       {"var": "freq",        "range_str": "1,5"},
+    "real_world_09.py":       {"var": "scale",       "range_str": "0.5,2"},
+    "real_world_10.py":       {"var": "startangle",  "range_str": "0,360"},
 }
 
 

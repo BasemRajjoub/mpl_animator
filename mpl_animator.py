@@ -657,6 +657,10 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     global_decl = ""
     if has_3d and info.fig_node is not None:
         fig_source = _get_stmt_source(src, info.fig_node)
+        # Filter out ax creation sources that are identical to the fig
+        # creation statement (happens when fig and ax are created in a
+        # single call like ``fig, ax = plt.subplots(...)``).
+        ax_3d_sources = [s for s in ax_3d_sources if s != fig_source]
         fig_recreation = (
             _ind("fig.clear()") + "\n"
             + _ind(fig_source) + "\n"
