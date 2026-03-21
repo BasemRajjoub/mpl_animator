@@ -16,7 +16,7 @@ Usage (CLI):
 
 Usage (library):
     from mpl_animator import animate
-    code = animate(open("plot.py").read(), var="f", range_str="3,60", fmt="mp4")
+    code = animate(open("plot.py", encoding="utf-8").read(), var="f", range_str="3,60", fmt="mp4")
 """
 
 import ast
@@ -215,7 +215,10 @@ def scan_ast(src):
 
                     is_3d = _check_3d_projection(node)
 
-                    if isinstance(stmt, ast.Assign):
+                    # Only register axes targets for axes-creating methods, not plt.figure()
+                    _AXES_CREATORS = {"subplots", "subplot", "subplot_mosaic",
+                                      "add_subplot", "add_axes"}
+                    if attr in _AXES_CREATORS and isinstance(stmt, ast.Assign):
                         for target in stmt.targets:
                             for elt in ast.walk(target):
                                 if isinstance(elt, ast.Name) and elt.id != "fig":
@@ -290,12 +293,22 @@ def partition(src, tree, info, dep_vars, var):
     plot_stmts = []
 
     fig_found = False
+    # Variables assigned by plot/config statements (e.g. CS = ax.contour(...))
+    # — any later statement using these must also go to plot_stmts
+    plot_assigned: set = set()
 
     for stmt in tree.body:
         sid = id(stmt)
         text = _get_stmt_source(src, stmt)
 
         if info.node_is_show[sid]:
+            continue
+
+        # Function/class definitions always go to static — their bodies must
+        # not influence classification (ast.walk would otherwise find draw/
+        # config calls inside them and misclassify the def statement).
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            static_stmts.append(text)
             continue
 
         assigned = info.node_assigns[sid]
@@ -317,6 +330,7 @@ def partition(src, tree, info, dep_vars, var):
             continue
 
         depends_on_var = bool(assigned & (dep_vars | vars_set)) or bool(stmt_names & (vars_set | dep_vars))
+        uses_plot_assigned = bool(stmt_names & plot_assigned)
 
         if not fig_found:
             if depends_on_var:
@@ -324,8 +338,9 @@ def partition(src, tree, info, dep_vars, var):
             else:
                 static_stmts.append(text)
         else:
-            if has_draw or has_config:
+            if has_draw or has_config or uses_plot_assigned:
                 plot_stmts.append(text)
+                plot_assigned.update(assigned)  # track what this plot stmt assigned
             elif depends_on_var:
                 dynamic_stmts.append(text)
             else:
@@ -388,7 +403,6 @@ TEMPLATE = '''\
    <<<VAR_SUMMARY>>> over <<<FRAMES>>> frames @ <<<FPS>>>fps
 """
 <<<STATIC>>>
-import matplotlib.animation as animation
 import multiprocessing, os, subprocess, tempfile, shutil, time
 
 # -- frame update ----------------------------------------------------
@@ -418,6 +432,9 @@ def _encode_mp4(png_dir, out_mp4, fps):
         raise RuntimeError(f"ffmpeg failed:\\n{result.stderr}")
 
 def _save_output(png_paths, out_file, fps, interval, loop):
+    # Ensure output directory exists (handles nested paths on any OS)
+    out_dir = os.path.dirname(os.path.abspath(out_file))
+    os.makedirs(out_dir, exist_ok=True)
     if out_file.endswith(".mp4"):
         _encode_mp4(os.path.dirname(png_paths[0]), out_file, fps)
     else:
@@ -425,7 +442,7 @@ def _save_output(png_paths, out_file, fps, interval, loop):
 
 # -- config ----------------------------------------------------------
 _HAS_3D   = <<<HAS_3D>>>
-_OUT_FILE = "<<<OUTFILE>>>"
+_OUT_FILE = <<<OUTFILE>>>
 _FPS      = <<<FPS>>>
 _INTERVAL = <<<INTERVAL>>>
 _LOOP     = <<<LOOP>>>
@@ -440,30 +457,24 @@ def _frame_sequence():
 def render_sequential():
     frames = _frame_sequence()
     total = len(frames)
-    if _HAS_3D or _OUT_FILE.endswith(".mp4"):
-        tmpdir = tempfile.mkdtemp(prefix="anim_")
-        try:
-            paths = []
-            for idx, _i in enumerate(frames):
-                print(f"  Frame {idx+1}/{total}", end="\\r")
-                update(_i)
-                _path = os.path.join(tmpdir, f"frame_{idx:05d}.png")
-                plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
-                if _HAS_3D:
-                    plt.close("all")
-                paths.append(_path)
-            if not _HAS_3D:
+    tmpdir = tempfile.mkdtemp(prefix="anim_")
+    try:
+        paths = []
+        for idx, _i in enumerate(frames):
+            print(f"  Frame {idx+1}/{total}", end="\\r")
+            update(_i)
+            _path = os.path.join(tmpdir, f"frame_{idx:05d}.png")
+            plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
+            if _HAS_3D:
                 plt.close("all")
-            print()
-            _save_output(paths, _OUT_FILE, _FPS, _INTERVAL, _LOOP)
-            print("  Saved ->", _OUT_FILE)
-        finally:
-            shutil.rmtree(tmpdir, ignore_errors=True)
-    else:
-        ani = animation.FuncAnimation(
-            fig, update, frames=frames, interval=_INTERVAL, blit=False)
-        ani.save(_OUT_FILE, writer="pillow", fps=_FPS)
+            paths.append(_path)
+        if not _HAS_3D:
+            plt.close("all")
+        print()
+        _save_output(paths, _OUT_FILE, _FPS, _INTERVAL, _LOOP)
         print("  Saved ->", _OUT_FILE)
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 # -- parallel worker (one PNG per frame) -----------------------------
 def _render_one(job):
@@ -626,6 +637,16 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
             stacklevel=2,
         )
 
+    # Detect which animated vars had integer original values (for int-cast in generated code)
+    int_vars = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                for n in ast.walk(target):
+                    if isinstance(n, ast.Name) and n.id in vars_list:
+                        if isinstance(node.value, ast.Constant) and isinstance(node.value.value, int):
+                            int_vars.add(n.id)
+
     # -- Phase 2: Dependency tracking --
     dep_vars = build_deps(tree, vars_list)
 
@@ -657,20 +678,37 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     global_decl = ""
     if has_3d and info.fig_node is not None:
         fig_source = _get_stmt_source(src, info.fig_node)
-        # Filter out ax creation sources that are identical to the fig
-        # creation statement (happens when fig and ax are created in a
-        # single call like ``fig, ax = plt.subplots(...)``).
+        # Filter out ax creation sources identical to the fig statement
         ax_3d_sources = [s for s in ax_3d_sources if s != fig_source]
-        fig_recreation = (
-            _ind("fig.clear()") + "\n"
-            + _ind(fig_source) + "\n"
-            + (_ind(ax_3d_sources) + "\n" if ax_3d_sources else "")
+        # Detect whether `fig` is actually a named variable in this script
+        fig_is_named = "fig" in info.all_names and any(
+            "fig" in info.node_assigns.get(id(s), set())
+            for s in tree.body
         )
-        global_decl = _ind(f"global {', '.join(sorted(ax_3d_vars))}") + "\n"
+        if fig_is_named:
+            fig_recreation = (
+                _ind("fig.clear()") + "\n"
+                + _ind(fig_source) + "\n"
+                + (_ind(ax_3d_sources) + "\n" if ax_3d_sources else "")
+            )
+        else:
+            # Inline fig (e.g. plt.figure().add_subplot()); just re-run the statement
+            fig_recreation = (
+                _ind("plt.close('all')") + "\n"
+                + _ind(fig_source) + "\n"
+                + (_ind(ax_3d_sources) + "\n" if ax_3d_sources else "")
+            )
+            ax_3d_vars.discard("fig")  # fig not a real variable here
+        global_decl = _ind(f"global {', '.join(sorted(ax_3d_vars))}") + "\n" if ax_3d_vars else ""
 
     # One assignment line per animated variable
+    # Variables that were originally int literals are cast back to int
+    def _var_assign(v, s, step):
+        expr = f"{s!r} + _frame * {step!r}"
+        return f"    {v} = int({expr})" if v in int_vars else f"    {v} = {expr}"
+
     var_assignments = "\n".join(
-        f"    {v} = {s!r} + _frame * {step!r}"
+        _var_assign(v, s, step)
         for v, (s, _e), step in zip(vars_list, range_pairs, steps)
     )
 
@@ -684,7 +722,7 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
 
     # Worker receives (_frame, _idx, _tmpdir) -- use _frame for data, _idx for filename
     var_assignments_worker = "\n".join(
-        f"    {v} = {s!r} + _frame * {step!r}"
+        _var_assign(v, s, step)
         for v, (s, _e), step in zip(vars_list, range_pairs, steps)
     )
     worker_body = (
@@ -711,7 +749,7 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         .replace("<<<FRAMES>>>",      str(frames))
         .replace("<<<INTERVAL>>>",    str(interval))
         .replace("<<<FPS>>>",         str(fps))
-        .replace("<<<OUTFILE>>>",     out_file)
+        .replace("<<<OUTFILE>>>",     repr(out_file))
         .replace("<<<DPI>>>",         str(dpi))
         .replace("<<<WORKERS>>>",     str(workers))
         .replace("<<<HAS_3D>>>",      str(has_3d))
