@@ -772,6 +772,62 @@ class TestEdgeCases:
         items = ["x = 1", "if True:\n    y = 2", "z = 3"]
         assert _ind(items, 4) == "    x = 1\n    if True:\n        y = 2\n    z = 3"
 
+    def test_funcanimation_stripped(self):
+        """Scripts with existing FuncAnimation should have it stripped."""
+        src = textwrap.dedent("""\
+            import numpy as np
+            import matplotlib.pyplot as plt
+            from matplotlib.animation import FuncAnimation
+
+            fig, ax = plt.subplots()
+            x = np.linspace(0, 2*np.pi, 100)
+            amp = 1.0
+            line, = ax.plot(x, amp * np.sin(x))
+            ax.set_ylim(-3, 3)
+
+            def animate_inner(frame):
+                line.set_ydata(amp * np.sin(x + frame/10))
+                return line,
+
+            ani = FuncAnimation(fig, animate_inner, frames=100, interval=50, blit=True)
+            plt.show()
+        """)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            result = animate(src, var="amp", range_str="0.5,3", frames=10)
+            assert any("FuncAnimation detected" in str(x.message) for x in w)
+        ast.parse(result)
+        assert "def animate_inner" not in result
+        assert "ani = FuncAnimation" not in result
+        assert "def update(_frame):" in result
+
+    def test_dynamic_stmt_using_axes_goes_to_plot_stmts(self):
+        """A function call that uses axes AND depends on animated var must run after clear."""
+        src = textwrap.dedent("""\
+            import numpy as np
+            import matplotlib.pyplot as plt
+
+            phi = 0.5
+            ts = np.cumsum(np.random.randn(200) * phi)
+
+            fig, axes = plt.subplots(1, 2)
+
+            def my_acf(data, ax):
+                ax.bar(range(10), data[:10])
+
+            my_acf(ts, ax=axes[1])
+            axes[0].plot(ts)
+            axes[0].set_title(f'phi={phi}')
+            plt.show()
+        """)
+        result = animate(src, var="phi", range_str="0.1,0.9", frames=10)
+        ast.parse(result)
+        body = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
+        lines = body.strip().split("\n")
+        clear_idx = next(i for i, l in enumerate(lines) if "clear" in l)
+        acf_idx = next(i for i, l in enumerate(lines) if "my_acf(ts" in l)
+        assert acf_idx > clear_idx, "axes-using dynamic stmt must be after clear"
+
 
 # ===============================================================
 # Multi-variable animation
