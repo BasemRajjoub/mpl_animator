@@ -1,7 +1,7 @@
 """
 mpl_animator.py -- convert ANY static matplotlib script to an animation.
 Author: Basem Rajjoub (https://basemrajjoub.com)
-Version: 0.1.10
+Version: 0.1.11
 Uses only matplotlib + multiprocessing + Pillow (GIF) / ffmpeg (MP4).
 
 Usage (CLI):
@@ -209,15 +209,27 @@ def _unwrap_main_guard(tree):
 
 
 def _detect_pyplot_alias(tree):
-    """Detect the alias used for matplotlib.pyplot (default 'plt')."""
+    """Detect the alias used for matplotlib.pyplot (default 'plt').
+
+    Returns:
+        str: The alias name (e.g. 'plt', 'MPL', 'matplotlib.pyplot')
+        None: if `from matplotlib.pyplot import *` (wildcard)
+    """
     for stmt in tree.body:
         if isinstance(stmt, ast.Import):
             for alias in stmt.names:
                 if alias.name == "matplotlib.pyplot":
                     return alias.asname or "matplotlib.pyplot"
+                # bare `import matplotlib` — user may use matplotlib.pyplot.X()
+                if alias.name == "matplotlib" and alias.asname is None:
+                    # Check if matplotlib.pyplot is used anywhere in the tree
+                    for node in ast.walk(tree):
+                        if (isinstance(node, ast.Attribute) and node.attr == "pyplot"
+                                and isinstance(node.value, ast.Name)
+                                and node.value.id == "matplotlib"):
+                            return "matplotlib.pyplot"
         elif isinstance(stmt, ast.ImportFrom):
             if stmt.module == "matplotlib.pyplot":
-                # from matplotlib.pyplot import * — alias is None
                 for alias in stmt.names:
                     if alias.name == "*":
                         return None  # wildcard
@@ -312,6 +324,10 @@ def scan_ast(src):
                 elif isinstance(func, ast.Attribute) and func.attr == "FuncAnimation":
                     info.node_has_funcanimation[stmt_id] = True
 
+            # Track NamedExpr (walrus operator :=) assignments
+            if isinstance(node, ast.NamedExpr):
+                info.node_assigns[stmt_id].add(node.target.id)
+
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                 attr = node.func.attr
 
@@ -336,21 +352,30 @@ def scan_ast(src):
 
                     is_3d = _check_3d_projection(node)
 
-                    # Only register axes targets for axes-creating methods, not plt.figure()
+                    # Register axes targets from axes-creating methods.
+                    # Look for the enclosing Assign node (may be nested
+                    # inside try/except, with, for, etc.)
                     _AXES_CREATORS = {"subplots", "subplot", "subplot_mosaic",
                                       "add_subplot", "add_axes"}
-                    if attr in _AXES_CREATORS and isinstance(stmt, ast.Assign):
-                        for target in stmt.targets:
-                            for elt in ast.walk(target):
-                                if isinstance(elt, ast.Name) and elt.id != "fig":
-                                    ax = AxesInfo(
-                                        var_name=elt.id,
-                                        is_3d=is_3d,
-                                        creation_source=ast.get_source_segment(src, stmt) or "",
-                                    )
-                                    if attr == "add_subplot":
-                                        ax.subplot_spec = _extract_subplot_spec(node)
-                                    info.ax_info.append(ax)
+                    if attr in _AXES_CREATORS:
+                        # Find any Assign node in the stmt that contains
+                        # this call (handles both top-level and nested)
+                        for inner in ast.walk(stmt):
+                            if isinstance(inner, ast.Assign) and any(
+                                id(n) == id(node) for n in ast.walk(inner)
+                            ):
+                                for target in inner.targets:
+                                    for elt in ast.walk(target):
+                                        if isinstance(elt, ast.Name) and elt.id != "fig":
+                                            ax = AxesInfo(
+                                                var_name=elt.id,
+                                                is_3d=is_3d,
+                                                creation_source=ast.get_source_segment(src, stmt) or "",
+                                            )
+                                            if attr == "add_subplot":
+                                                ax.subplot_spec = _extract_subplot_spec(node)
+                                            info.ax_info.append(ax)
+                                break
 
     return tree, info
 
@@ -381,6 +406,10 @@ def build_deps(tree, var):
             used = _node_uses_names(node.value)
             if isinstance(node.target, ast.Name):
                 rhs_uses.setdefault(node.target.id, set()).update(used)
+        elif isinstance(node, ast.NamedExpr):
+            # Walrus operator: y := expr
+            used = _node_uses_names(node.value)
+            rhs_uses.setdefault(node.target.id, set()).update(used)
 
     found, queue = set(), set(roots)
     while queue:
@@ -591,7 +620,7 @@ def _ind(lst, n=4):
 
 # -- Code generation template --
 TEMPLATE = '''\
-"""Auto-generated by mpl-animator v0.1.10 from <<<SOURCE>>>
+"""Auto-generated by mpl-animator v0.1.11 from <<<SOURCE>>>
    <<<VAR_SUMMARY>>> over <<<FRAMES>>> frames @ <<<FPS>>>fps
 """
 <<<STATIC>>>
@@ -911,6 +940,19 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
             "mpl-animator replaces it with its own frame loop.",
             stacklevel=2,
         )
+
+    # Warn about variable shadowing (animated var used as for-loop target)
+    for node in ast.walk(tree):
+        if isinstance(node, ast.For):
+            for_targets = _get_assigned_names(node.target)
+            shadowed = for_targets & set(vars_list)
+            if shadowed:
+                warnings.warn(
+                    f"Animated variable(s) {shadowed} also used as for-loop "
+                    f"target — the loop will overwrite the animated value each "
+                    f"frame. Consider renaming the loop variable.",
+                    stacklevel=2,
+                )
 
     # Detect which animated vars had integer original values (for int-cast in generated code)
     int_vars = set()

@@ -904,6 +904,164 @@ class TestEdgeCases:
         assert "ax.plot" in body
         assert "signal" in body
 
+    def test_try_except_wrapping_fig_creation(self):
+        """Axes inside try/except must still be detected for clearing."""
+        src = textwrap.dedent("""\
+            import matplotlib.pyplot as plt
+            import numpy as np
+            t = 1.0
+            try:
+                fig, ax = plt.subplots()
+            except Exception:
+                pass
+            x = np.linspace(0, 10, 100)
+            y = np.sin(t * x)
+            ax.plot(x, y)
+            plt.show()
+        """)
+        _, info = scan_ast(src)
+        assert any(a.var_name == "ax" for a in info.ax_info)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+
+    def test_fully_qualified_matplotlib(self):
+        """import matplotlib; matplotlib.pyplot.subplots() must work."""
+        src = textwrap.dedent("""\
+            import matplotlib
+            import numpy as np
+            t = 1.0
+            x = np.linspace(0, 10, 100)
+            y = np.sin(t * x)
+            fig, ax = matplotlib.pyplot.subplots()
+            ax.plot(x, y)
+            matplotlib.pyplot.show()
+        """)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+        assert "import matplotlib.pyplot as plt" in result
+
+    def test_walrus_in_draw_call_tracked(self):
+        """y := expr in draw call must be tracked in dependencies."""
+        src = textwrap.dedent("""\
+            import numpy as np
+            import matplotlib.pyplot as plt
+            t = 1.0
+            x = np.linspace(0, 10, 100)
+            fig, ax = plt.subplots()
+            ax.plot(x, y := np.sin(t * x))
+            ax.set_title(f't={t}')
+            plt.show()
+        """)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+
+    def test_variable_shadowing_warns(self):
+        """Animated var used as for-loop target should produce a warning."""
+        src = textwrap.dedent("""\
+            import numpy as np
+            import matplotlib.pyplot as plt
+            t = 1.0
+            x = np.linspace(0, 10, 100)
+            y = np.zeros(100)
+            for t in range(5):
+                y += np.sin(t * x)
+            fig, ax = plt.subplots()
+            ax.plot(x, y)
+            plt.show()
+        """)
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            animate(src, var="t", range_str="0.5,5", frames=5)
+            assert any("loop target" in str(x.message) for x in w)
+
+    def test_comprehension_with_draw_calls(self):
+        """[ax.plot(...) for k in range(n)] must produce valid code."""
+        src = textwrap.dedent("""\
+            import numpy as np
+            import matplotlib.pyplot as plt
+            n = 3
+            x = np.linspace(0, 10, 100)
+            fig, ax = plt.subplots()
+            [ax.plot(x, np.sin(k * x), alpha=0.5) for k in range(n)]
+            ax.set_title(f'n={n}')
+            plt.show()
+        """)
+        result = animate(src, var="n", range_str="1,8", frames=5)
+        ast.parse(result)
+
+    def test_chained_method_call(self):
+        """fig.add_subplot(111).plot(x, y) should produce valid code."""
+        src = textwrap.dedent("""\
+            import matplotlib.pyplot as plt
+            import numpy as np
+            t = 1.0
+            x = np.linspace(0, 10, 100)
+            y = np.sin(t * x)
+            fig = plt.figure()
+            fig.add_subplot(111).plot(x, y)
+            plt.show()
+        """)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+
+    def test_multi_figure_scripts(self):
+        """Scripts with multiple plt.figure() calls should produce valid code."""
+        src = textwrap.dedent("""\
+            import matplotlib.pyplot as plt
+            import numpy as np
+            t = 1.0
+            x = np.linspace(0, 10, 100)
+            fig1 = plt.figure(1)
+            ax1 = fig1.add_subplot(111)
+            ax1.plot(x, np.sin(t * x))
+            fig2 = plt.figure(2)
+            ax2 = fig2.add_subplot(111)
+            ax2.plot(x, np.cos(t * x))
+            plt.show()
+        """)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+
+    def test_context_manager_wrapping_draw(self):
+        """with warnings.catch_warnings(): wrapping draw calls must work."""
+        src = textwrap.dedent("""\
+            import warnings
+            import numpy as np
+            import matplotlib.pyplot as plt
+            t = 1.0
+            x = np.linspace(0, 10, 100)
+            y = np.sin(t * x)
+            fig, ax = plt.subplots()
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                ax.plot(x, y)
+            ax.set_title(f't={t}')
+            plt.show()
+        """)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+
+    def test_add_gridspec_subplot(self):
+        """fig.add_gridspec() + fig.add_subplot(gs[...]) must work."""
+        src = textwrap.dedent("""\
+            import matplotlib.pyplot as plt
+            import numpy as np
+            t = 1.0
+            x = np.linspace(0, 10, 100)
+            fig = plt.figure()
+            gs = fig.add_gridspec(2, 2)
+            ax1 = fig.add_subplot(gs[0, 0])
+            ax2 = fig.add_subplot(gs[0, 1])
+            ax1.plot(x, np.sin(t * x))
+            ax2.plot(x, np.cos(t * x))
+            plt.show()
+        """)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+        _, info = scan_ast(src)
+        ax_names = {a.var_name for a in info.ax_info}
+        assert "ax1" in ax_names and "ax2" in ax_names
+
 
 # ===============================================================
 # Multi-variable animation
