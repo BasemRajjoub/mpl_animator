@@ -876,8 +876,13 @@ class TestEdgeCases:
         """)
         result = animate(src, var="t", range_str="0.5,5", frames=5)
         ast.parse(result)
-        assert "from matplotlib.pyplot import *" not in result
-        assert "import matplotlib.pyplot as plt" in result
+        # Wildcard stays at module level for update() path
+        assert "from matplotlib.pyplot import *" in result.split("def update")[0]
+        # Worker body must NOT have wildcard (illegal inside function)
+        worker = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
+        assert "from matplotlib.pyplot import *" not in worker
+        assert "import matplotlib.pyplot as plt" in worker
+        assert "from matplotlib.pyplot import" in worker  # explicit names
 
     def test_style_context_unwrapped(self):
         """with plt.style.context(...) must be unwrapped for draw detection."""
