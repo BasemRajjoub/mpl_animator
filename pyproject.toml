@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mpl-animator"
-version = "0.1.6"
+version = "0.1.7"
 description = "Turn any static matplotlib script into an animated GIF or MP4 by sweeping one or more variables"
 authors = [{name = "Basem Rajjoub"}]
 license = "MIT"

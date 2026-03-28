@@ -1,7 +1,7 @@
 """
 mpl_animator.py -- convert ANY static matplotlib script to an animation.
 Author: Basem Rajjoub (https://basemrajjoub.com)
-Version: 0.1.6
+Version: 0.1.7
 Uses only matplotlib + multiprocessing + Pillow (GIF) / ffmpeg (MP4).
 
 Usage (CLI):
@@ -12,6 +12,7 @@ Usage (CLI):
     python mpl_animator.py plot.py --var t --range "0,1" --reverse
     python mpl_animator.py plot.py --var t --range "0,1" --loop 3
     python mpl_animator.py plot.py --var t alpha --range "0,6.28" "0,1"
+    python mpl_animator.py plot.py --var n --values "5,10,50,200,1000"
     (run generated script with --sequential to skip parallel)
 
 Usage (library):
@@ -29,6 +30,7 @@ from pathlib import Path
 
 # -- Method categories --
 DRAW_METHODS = {
+    # matplotlib.axes.Axes
     "plot", "scatter", "bar", "barh", "fill", "fill_between", "fill_betweenx",
     "imshow", "pcolormesh", "pcolor", "contour", "contourf",
     "tricontour", "tricontourf",
@@ -40,6 +42,24 @@ DRAW_METHODS = {
     "bar3d", "contour3D", "contourf3D",
     "quiver", "barbs",
     "add_patch", "add_collection",
+    "stackplot", "broken_barh", "table", "spy", "matshow",
+    "triplot", "tripcolor", "specgram", "magnitude_spectrum",
+    "phase_spectrum", "psd", "csd", "cohere", "angle_spectrum",
+    "xcorr", "acorr", "voxels",
+    # seaborn
+    "heatmap", "lineplot", "scatterplot", "barplot", "boxplot",
+    "violinplot", "stripplot", "swarmplot", "pointplot", "countplot",
+    "kdeplot", "rugplot", "distplot", "histplot", "ecdfplot",
+    "regplot", "lmplot", "residplot",
+    "pairplot", "jointplot", "catplot", "relplot", "displot", "FacetGrid",
+    "clustermap",
+    # pandas plot accessors
+    "plot_kde", "plot_density", "plot_bar", "plot_barh",
+    "plot_hist", "plot_box", "plot_area", "plot_pie",
+    "plot_scatter", "plot_hexbin", "plot_line",
+    # pandas.plotting
+    "scatter_matrix", "parallel_coordinates", "andrews_curves",
+    "radviz", "bootstrap_plot", "lag_plot", "autocorrelation_plot",
 }
 
 CONFIG_METHODS = {
@@ -125,6 +145,7 @@ class ASTInfo:
     first_draw_node: ast.stmt | None = None
     last_draw_node: ast.stmt | None = None
     node_assigns: dict = field(default_factory=dict)
+    node_aug_assigns: dict = field(default_factory=dict)  # vars with +=, -=, etc.
     node_has_draw: dict = field(default_factory=dict)
     node_has_config: dict = field(default_factory=dict)
     node_is_show: dict = field(default_factory=dict)
@@ -177,6 +198,7 @@ def scan_ast(src):
     for stmt in tree.body:
         stmt_id = id(stmt)
         info.node_assigns[stmt_id] = set()
+        info.node_aug_assigns[stmt_id] = set()
         info.node_has_draw[stmt_id] = False
         info.node_has_config[stmt_id] = False
         info.node_is_show[stmt_id] = False
@@ -187,7 +209,9 @@ def scan_ast(src):
                 for target in node.targets:
                     info.node_assigns[stmt_id] |= _get_assigned_names(target)
             elif isinstance(node, ast.AugAssign):
-                info.node_assigns[stmt_id] |= _get_assigned_names(node.target)
+                aug_names = _get_assigned_names(node.target)
+                info.node_assigns[stmt_id] |= aug_names
+                info.node_aug_assigns[stmt_id] |= aug_names
             elif isinstance(node, ast.AnnAssign) and node.value is not None:
                 info.node_assigns[stmt_id] |= _get_assigned_names(node.target)
 
@@ -296,6 +320,9 @@ def partition(src, tree, info, dep_vars, var):
     # Variables assigned by plot/config statements (e.g. CS = ax.contour(...))
     # — any later statement using these must also go to plot_stmts
     plot_assigned: set = set()
+    # Variables that use augmented assignment (+=, -=, etc.) inside update() —
+    # these need `global` declarations to avoid UnboundLocalError.
+    aug_assigned_in_update: set = set()
 
     for stmt in tree.body:
         sid = id(stmt)
@@ -312,6 +339,7 @@ def partition(src, tree, info, dep_vars, var):
             continue
 
         assigned = info.node_assigns[sid]
+        aug_assigns = info.node_aug_assigns[sid]
         has_draw = info.node_has_draw[sid]
         has_config = info.node_has_config[sid]
         is_fig = info.node_is_fig_creation[sid]
@@ -335,18 +363,21 @@ def partition(src, tree, info, dep_vars, var):
         if not fig_found:
             if depends_on_var:
                 dynamic_stmts.append(text)
+                aug_assigned_in_update |= aug_assigns
             else:
                 static_stmts.append(text)
         else:
             if has_draw or has_config or uses_plot_assigned:
                 plot_stmts.append(text)
-                plot_assigned.update(assigned)  # track what this plot stmt assigned
+                plot_assigned.update(assigned)
+                aug_assigned_in_update |= aug_assigns
             elif depends_on_var:
                 dynamic_stmts.append(text)
+                aug_assigned_in_update |= aug_assigns
             else:
                 static_stmts.append(text)
 
-    return static_stmts, dynamic_stmts, plot_stmts
+    return static_stmts, dynamic_stmts, plot_stmts, aug_assigned_in_update
 
 
 # -- Axes clearing code generation --
@@ -399,7 +430,7 @@ def _ind(lst, n=4):
 
 # -- Code generation template --
 TEMPLATE = '''\
-"""Auto-generated by mpl-animator v0.1.6 from <<<SOURCE>>>
+"""Auto-generated by mpl-animator v0.1.7 from <<<SOURCE>>>
    <<<VAR_SUMMARY>>> over <<<FRAMES>>> frames @ <<<FPS>>>fps
 """
 <<<STATIC>>>
@@ -460,17 +491,27 @@ def render_sequential():
     tmpdir = tempfile.mkdtemp(prefix="anim_")
     try:
         paths = []
+        _skipped = 0
         for idx, _i in enumerate(frames):
             print(f"  Frame {idx+1}/{total}", end="\\r")
-            update(_i)
-            _path = os.path.join(tmpdir, f"frame_{idx:05d}.png")
-            plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
-            if _HAS_3D:
+            try:
+                update(_i)
+                _path = os.path.join(tmpdir, f"frame_{idx:05d}.png")
+                plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
+                if _HAS_3D:
+                    plt.close("all")
+                paths.append(_path)
+            except Exception as _e:
+                _skipped += 1
+                print(f"\\n  WARNING: frame {idx} failed: {_e}")
                 plt.close("all")
-            paths.append(_path)
         if not _HAS_3D:
             plt.close("all")
         print()
+        if _skipped:
+            print(f"  {_skipped}/{total} frames skipped due to errors")
+        if not paths:
+            raise RuntimeError("All frames failed - no output produced")
         _save_output(paths, _OUT_FILE, _FPS, _INTERVAL, _LOOP)
         print("  Saved ->", _OUT_FILE)
     finally:
@@ -479,11 +520,16 @@ def render_sequential():
 # -- parallel worker (one PNG per frame) -----------------------------
 def _render_one(job):
     _frame, _idx, _tmpdir = job
+    try:
 <<<WORKER_BODY>>>
-    _path = os.path.join(_tmpdir, f"frame_{_idx:05d}.png")
-    plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
-    plt.close("all")
-    return _path
+        _path = os.path.join(_tmpdir, f"frame_{_idx:05d}.png")
+        plt.savefig(_path, dpi=<<<DPI>>>, bbox_inches="tight")
+        plt.close("all")
+        return _path
+    except Exception as _e:
+        plt.close("all")
+        print(f"  WARNING: frame {_idx} failed: {_e}")
+        return None
 
 def render_parallel(n_workers):
     frames = _frame_sequence()
@@ -494,8 +540,10 @@ def render_parallel(n_workers):
     try:
         jobs = [(_frame, _idx, tmpdir) for _idx, _frame in enumerate(frames)]
         with multiprocessing.Pool(n_workers) as pool:
-            paths = list(pool.imap(_render_one, jobs, chunksize=chunk))
+            paths = [p for p in pool.imap(_render_one, jobs, chunksize=chunk) if p]
         paths.sort()
+        if not paths:
+            raise RuntimeError("All frames failed - no output produced")
         print(f"  Stitching {len(paths)} frames...")
         _save_output(paths, _OUT_FILE, _FPS, _INTERVAL, _LOOP)
         print("  Saved ->", _OUT_FILE)
@@ -708,7 +756,7 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     dep_vars = build_deps(tree, vars_list)
 
     # -- Phase 3: Partition --
-    static_stmts, dynamic_stmts, plot_stmts = partition(
+    static_stmts, dynamic_stmts, plot_stmts, aug_assigned = partition(
         src, tree, info, dep_vars, vars_list
     )
 
@@ -756,20 +804,27 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
                 + (_ind(ax_3d_sources) + "\n" if ax_3d_sources else "")
             )
             ax_3d_vars.discard("fig")  # fig not a real variable here
-        global_decl = _ind(f"global {', '.join(sorted(ax_3d_vars))}") + "\n" if ax_3d_vars else ""
+    # Collect all variables that need `global` inside update():
+    # - 3D axes/fig vars (for fig recreation)
+    # - augmented-assigned vars (+=, -=, etc.) to avoid UnboundLocalError
+    all_global_vars = set()
+    if has_3d:
+        all_global_vars |= ax_3d_vars
+    # aug_assigned vars that are NOT the animated vars themselves (those are local)
+    all_global_vars |= (aug_assigned - set(vars_list))
+    global_decl = _ind(f"global {', '.join(sorted(all_global_vars))}") + "\n" if all_global_vars else ""
 
     # One assignment line per animated variable
     # Variables that were originally int literals are cast back to int
-    def _var_assign_range(v, s, step):
+    def _var_expr_range(v, s, step):
         expr = f"{s!r} + _frame * {step!r}"
-        return f"    {v} = int({expr})" if v in int_vars else f"    {v} = {expr}"
+        return f"{v} = int({expr})" if v in int_vars else f"{v} = {expr}"
 
-    def _var_assign_values(v, vals):
+    def _var_expr_values(v, vals):
         name = f"_VALUES_{v}"
-        cast = "int" if v in int_vars else None
-        if cast:
-            return f"    {v} = int({name}[_frame])"
-        return f"    {v} = {name}[_frame]"
+        if v in int_vars:
+            return f"{v} = int({name}[_frame])"
+        return f"{v} = {name}[_frame]"
 
     if use_values:
         # Emit _VALUES_<var> = [...] as module-level constants.
@@ -780,40 +835,30 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
         )
         static_block = static_block + "\n" + values_decls
         final_static.append(values_decls)
-        var_assignments = "\n".join(
-            _var_assign_values(v, vals)
+        var_assign_stmts = [
+            _var_expr_values(v, vals)
             for v, vals in zip(vars_list, values_lists)
-        )
+        ]
     else:
-        var_assignments = "\n".join(
-            _var_assign_range(v, s, step)
+        var_assign_stmts = [
+            _var_expr_range(v, s, step)
             for v, (s, _e), step in zip(vars_list, range_pairs, steps)
-        )
+        ]
 
     update_body = (
-        var_assignments + "\n"
+        _ind(var_assign_stmts) + "\n"
         + global_decl
         + (_ind(dynamic_stmts) + "\n" if dynamic_stmts else "")
         + (fig_recreation if has_3d else (_ind(clear) + "\n"))
         + _ind(plot_stmts)
     )
 
-    # Worker receives (_frame, _idx, _tmpdir) -- use _frame for data, _idx for filename
-    if use_values:
-        var_assignments_worker = "\n".join(
-            _var_assign_values(v, vals)
-            for v, vals in zip(vars_list, values_lists)
-        )
-    else:
-        var_assignments_worker = "\n".join(
-            _var_assign_range(v, s, step)
-            for v, (s, _e), step in zip(vars_list, range_pairs, steps)
-        )
+    # Worker body is inside try: block, so needs 8-space indentation
     worker_body = (
-        _ind(final_static, 4) + "\n"
-        + var_assignments_worker + "\n"
-        + (_ind(dynamic_stmts, 4) + "\n" if dynamic_stmts else "")
-        + _ind(plot_stmts, 4)
+        _ind(final_static, 8) + "\n"
+        + _ind(var_assign_stmts, 8) + "\n"
+        + (_ind(dynamic_stmts, 8) + "\n" if dynamic_stmts else "")
+        + _ind(plot_stmts, 8)
     )
 
     # Docstring summary: single var uses classic form, multi-var lists all

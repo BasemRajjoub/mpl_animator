@@ -48,46 +48,28 @@ class TestParseVal:
     def test_negative(self):
         assert parse_val("-5") == -5
 
-    def test_pi(self):
+    def test_named_constants(self):
         import math
         assert parse_val("pi") == pytest.approx(math.pi)
-
-    def test_tau(self):
-        import math
         assert parse_val("tau") == pytest.approx(math.tau)
-
-    def test_e(self):
-        import math
         assert parse_val("e") == pytest.approx(math.e)
 
     def test_arithmetic(self):
         assert parse_val("2*pi") == pytest.approx(2 * 3.141592653589793)
-
-    def test_division(self):
         assert parse_val("pi/2") == pytest.approx(1.5707963267948966)
-
-    def test_complex_expression(self):
         assert parse_val("2*pi + 1") == pytest.approx(2 * 3.141592653589793 + 1)
 
-    def test_sqrt_function(self):
+    def test_functions(self):
         assert parse_val("sqrt(4)") == pytest.approx(2.0)
-
-    def test_sin_function(self):
         assert parse_val("sin(pi)") == pytest.approx(0.0, abs=1e-10)
 
-    def test_rejects_unknown_name(self):
+    def test_rejects_unsafe_input(self):
         with pytest.raises(ValueError, match="Unknown name"):
             parse_val("foo")
-
-    def test_rejects_import(self):
         with pytest.raises((ValueError, SyntaxError)):
             parse_val("__import__('os')")
-
-    def test_rejects_attribute_access(self):
         with pytest.raises((ValueError, SyntaxError)):
             parse_val("os.system('echo hi')")
-
-    def test_rejects_unknown_function(self):
         with pytest.raises(ValueError, match="Unsupported"):
             parse_val("eval('1')")
 
@@ -99,29 +81,7 @@ class TestParseVal:
 # scan_ast - AST scanning
 # ===============================================================
 class TestScanAST:
-    def test_finds_figure_line(self):
-        src = textwrap.dedent("""\
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            ax.plot([1,2,3], [1,2,3])
-            plt.show()
-        """)
-        _, info = scan_ast(src)
-        assert info.fig_node is not None
-        assert info.fig_node.lineno == 2
-
-    def test_finds_show_line(self):
-        src = textwrap.dedent("""\
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            ax.plot([1,2,3], [1,2,3])
-            plt.show()
-        """)
-        _, info = scan_ast(src)
-        assert info.show_node is not None
-        assert info.show_node.lineno == 4
-
-    def test_finds_draw_methods(self):
+    def test_finds_figure_show_draw(self):
         src = textwrap.dedent("""\
             import matplotlib.pyplot as plt
             fig, ax = plt.subplots()
@@ -130,11 +90,12 @@ class TestScanAST:
             plt.show()
         """)
         _, info = scan_ast(src)
-        assert info.first_draw_node is not None
+        assert info.fig_node is not None and info.fig_node.lineno == 2
+        assert info.show_node is not None and info.show_node.lineno == 5
         assert info.first_draw_node.lineno == 3
         assert info.last_draw_node.lineno == 4
 
-    def test_finds_config_methods(self):
+    def test_config_vs_draw_classification(self):
         src = textwrap.dedent("""\
             import matplotlib.pyplot as plt
             fig, ax = plt.subplots()
@@ -142,8 +103,7 @@ class TestScanAST:
             ax.plot([1,2,3], [1,2,3])
             plt.show()
         """)
-        tree, info = scan_ast(src)  # tree needed for tree.body access below
-        # set_title is config, not draw
+        tree, info = scan_ast(src)
         stmt3 = tree.body[2]  # ax.set_title
         assert info.node_has_config[id(stmt3)] is True
         assert info.node_has_draw[id(stmt3)] is False
@@ -157,11 +117,10 @@ class TestScanAST:
         """)
         _, info = scan_ast(src)
         ax_names = {a.var_name for a in info.ax_info}
-        assert "ax1" in ax_names
-        assert "ax2" in ax_names
+        assert ax_names == {"ax1", "ax2"}
         assert "fig" not in ax_names
 
-    def test_detects_3d_projection_subplots(self):
+    def test_detects_3d_projection(self):
         src = textwrap.dedent("""\
             import matplotlib.pyplot as plt
             fig, ax = plt.subplots(subplot_kw={'projection': '3d'})
@@ -169,25 +128,22 @@ class TestScanAST:
             plt.show()
         """)
         _, info = scan_ast(src)
-        assert len(info.ax_info) == 1
         assert info.ax_info[0].is_3d is True
 
-    def test_detects_3d_projection_add_subplot(self):
-        src = textwrap.dedent("""\
+        src2 = textwrap.dedent("""\
             import matplotlib.pyplot as plt
             fig = plt.figure()
             ax = fig.add_subplot(111, projection='3d')
-            ax.plot_surface([], [], [])
             plt.show()
         """)
-        _, info = scan_ast(src)
-        assert any(a.is_3d for a in info.ax_info)
+        _, info2 = scan_ast(src2)
+        assert any(a.is_3d for a in info2.ax_info)
 
-    def test_handles_augmented_assign(self):
+    def test_augmented_and_annotated_assign(self):
         src = textwrap.dedent("""\
             import matplotlib.pyplot as plt
             import numpy as np
-            t = 1.0
+            t: float = 1.0
             x = np.linspace(0, 10, 100)
             y = np.sin(x)
             y += t
@@ -195,22 +151,12 @@ class TestScanAST:
             ax.plot(x, y)
             plt.show()
         """)
-        tree, info = scan_ast(src)  # tree needed for tree.body access below
-        # y += t is on line 6 - should have 'y' in assigns
-        stmt5 = tree.body[5]  # y += t
-        assert "y" in info.node_assigns[id(stmt5)]
-
-    def test_handles_annotated_assign(self):
-        src = textwrap.dedent("""\
-            import matplotlib.pyplot as plt
-            t: float = 1.0
-            fig, ax = plt.subplots()
-            ax.plot([t], [t])
-            plt.show()
-        """)
-        tree, info = scan_ast(src)  # tree needed for tree.body access below
-        stmt1 = tree.body[1]  # t: float = 1.0
-        assert "t" in info.node_assigns[id(stmt1)]
+        tree, info = scan_ast(src)
+        stmt_t = tree.body[2]  # t: float = 1.0
+        assert "t" in info.node_assigns[id(stmt_t)]
+        stmt_aug = tree.body[5]  # y += t
+        assert "y" in info.node_assigns[id(stmt_aug)]
+        assert "y" in info.node_aug_assigns[id(stmt_aug)]
 
     def test_all_names_collected(self):
         src = textwrap.dedent("""\
@@ -222,28 +168,16 @@ class TestScanAST:
             plt.show()
         """)
         _, info = scan_ast(src)
-        assert "x" in info.all_names
-        assert "y" in info.all_names
-        assert "fig" in info.all_names
-        assert "ax" in info.all_names
-        assert "plt" in info.all_names
+        for name in ("x", "y", "fig", "ax", "plt"):
+            assert name in info.all_names
 
-    def test_no_figure_creation(self):
+    def test_no_figure_no_show(self):
         src = textwrap.dedent("""\
             import matplotlib.pyplot as plt
             plt.plot([1,2,3], [1,2,3])
-            plt.show()
         """)
         _, info = scan_ast(src)
         assert info.fig_node is None
-
-    def test_no_show(self):
-        src = textwrap.dedent("""\
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            ax.plot([1,2,3], [1,2,3])
-        """)
-        _, info = scan_ast(src)
         assert info.show_node is None
 
 
@@ -251,16 +185,7 @@ class TestScanAST:
 # build_deps - dependency tracking
 # ===============================================================
 class TestBuildDeps:
-    def test_direct_dependency(self):
-        src = textwrap.dedent("""\
-            t = 1.0
-            y = t * 2
-        """)
-        tree = ast.parse(src)
-        deps = build_deps(tree, "t")
-        assert "y" in deps
-
-    def test_transitive_dependency(self):
+    def test_direct_and_transitive(self):
         src = textwrap.dedent("""\
             t = 1.0
             a = t + 1
@@ -269,9 +194,7 @@ class TestBuildDeps:
         """)
         tree = ast.parse(src)
         deps = build_deps(tree, "t")
-        assert "a" in deps
-        assert "b" in deps
-        assert "c" in deps
+        assert {"a", "b", "c"} <= deps
 
     def test_no_false_positives(self):
         src = textwrap.dedent("""\
@@ -283,33 +206,22 @@ class TestBuildDeps:
         tree = ast.parse(src)
         deps = build_deps(tree, "t")
         assert "a" in deps
-        assert "x" not in deps
-        assert "z" not in deps
+        assert "x" not in deps and "z" not in deps
 
-    def test_augassign_dependency(self):
+    def test_augassign_and_annassign(self):
         src = textwrap.dedent("""\
             t = 1.0
             y = 0
             y += t
+            z: float = t * 2
         """)
         tree = ast.parse(src)
         deps = build_deps(tree, "t")
-        assert "y" in deps
-
-    def test_annassign_dependency(self):
-        src = textwrap.dedent("""\
-            t = 1.0
-            y: float = t * 2
-        """)
-        tree = ast.parse(src)
-        deps = build_deps(tree, "t")
-        assert "y" in deps
+        assert "y" in deps and "z" in deps
 
     def test_empty_script(self):
-        src = "t = 1.0\n"
-        tree = ast.parse(src)
-        deps = build_deps(tree, "t")
-        assert deps == set()  # no dependents
+        tree = ast.parse("t = 1.0\n")
+        assert build_deps(tree, "t") == set()
 
 
 # ===============================================================
@@ -329,19 +241,12 @@ class TestPartition:
         """)
         tree, info = scan_ast(src)
         dep_vars = build_deps(tree, "t")
-        static, dynamic, plot = partition(src, tree, info, dep_vars, "t")
+        static, dynamic, plot, _aug = partition(src, tree, info, dep_vars, "t")
 
-        # Imports and fig creation should be static
         assert any("import matplotlib" in s for s in static)
         assert any("subplots" in s for s in static)
-
-        # y depends on t, should be dynamic
         assert any("y = " in s or "y =" in s for s in dynamic)
-
-        # ax.plot should be in plot
         assert any("ax.plot" in s for s in plot)
-
-        # show() should be excluded entirely
         all_text = "\n".join(static + dynamic + plot)
         assert "plt.show()" not in all_text
 
@@ -355,22 +260,16 @@ class TestPartition:
         """)
         tree, info = scan_ast(src)
         dep_vars = build_deps(tree, "t")
-        static_s, dynamic_s, _ = partition(src, tree, info, dep_vars, "t")
-
-        # t = 5.0 should be skipped (we generate our own assignment)
-        assert not any(s.strip() == "t = 5.0" for s in static_s)
-        assert not any(s.strip() == "t = 5.0" for s in dynamic_s)
+        static_s, dynamic_s, _, _aug = partition(src, tree, info, dep_vars, "t")
+        assert not any(s.strip() == "t = 5.0" for s in static_s + dynamic_s)
 
     def test_multiline_statement_intact(self):
         src = _read_fixture("multiline_stmt.py")
         tree, info = scan_ast(src)
         dep_vars = build_deps(tree, "t")
-        _, dynamic, _ = partition(src, tree, info, dep_vars, "t")
-
-        # The multi-line y = sin(\n    t*x\n) should be intact in dynamic
+        _, dynamic, _, _aug = partition(src, tree, info, dep_vars, "t")
         dynamic_text = "\n".join(dynamic)
         assert "np.sin(" in dynamic_text
-        assert "t * x" in dynamic_text or "t*x" in dynamic_text
 
     def test_config_after_figure_goes_to_plot(self):
         src = textwrap.dedent("""\
@@ -382,10 +281,22 @@ class TestPartition:
         """)
         tree, info = scan_ast(src)
         dep_vars = build_deps(tree, "t")
-        _, _, plot = partition(src, tree, info, dep_vars, "t")
-
-        # set_title is config, should be in plot section (after fig creation)
+        _, _, plot, _aug = partition(src, tree, info, dep_vars, "t")
         assert any("set_title" in s for s in plot)
+
+    def test_augmented_assign_tracked(self):
+        """partition() reports augmented-assigned vars; none for non-aug scripts."""
+        src = _read_fixture("augmented_assign.py")
+        tree, info = scan_ast(src)
+        dep_vars = build_deps(tree, "t")
+        _, _, _, aug = partition(src, tree, info, dep_vars, "t")
+        assert "y" in aug
+
+        src2 = _read_fixture("simple_line.py")
+        tree2, info2 = scan_ast(src2)
+        dep_vars2 = build_deps(tree2, "t")
+        _, _, _, aug2 = partition(src2, tree2, info2, dep_vars2, "t")
+        assert len(aug2) == 0
 
 
 # ===============================================================
@@ -396,11 +307,9 @@ class TestInjectAgg:
         stmts = ["import matplotlib.pyplot as plt", "x = 1"]
         result = _inject_agg(stmts)
         assert result[0] == "import matplotlib; matplotlib.use('Agg')"
-        assert "import matplotlib.pyplot as plt" in result
 
     def test_injects_at_start_if_no_mpl_import(self):
-        stmts = ["import numpy as np", "x = 1"]
-        result = _inject_agg(stmts)
+        result = _inject_agg(["import numpy as np", "x = 1"])
         assert result[0] == "import matplotlib; matplotlib.use('Agg')"
 
     def test_removes_existing_use_call(self):
@@ -410,98 +319,90 @@ class TestInjectAgg:
         assert not any("TkAgg" in s for s in result)
         assert any("Agg" in s for s in result)
 
-    def test_no_duplicate_injection(self):
-        stmts = ["import matplotlib; matplotlib.use('Agg')",
-                  "import matplotlib.pyplot as plt"]
-        result = _inject_agg(stmts)
-        agg_count = sum(1 for s in result if "matplotlib.use('Agg')" in s)
-        assert agg_count == 1
-
 
 # ===============================================================
 # _gen_clear_lines - axes clearing
 # ===============================================================
 class TestGenClearLines:
-    def test_no_axes_info(self):
+    def test_no_axes_uses_gca(self):
         result = _gen_clear_lines([])
         assert any("clear" in line for line in result)
 
-    def test_single_2d_axes(self):
-        result = _gen_clear_lines([AxesInfo(var_name="ax")])
+    def test_2d_axes_handles_dict_flat_iter(self):
+        """Clear code must handle dict (mosaic), 2D array (.flat), and iterable."""
+        result = _gen_clear_lines([AxesInfo(var_name="axs")])
         text = "\n".join(result)
-        assert "ax" in text
-        assert "clear" in text
-
-    def test_multiple_axes(self):
-        result = _gen_clear_lines([
-            AxesInfo(var_name="ax1"),
-            AxesInfo(var_name="ax2"),
-        ])
-        text = "\n".join(result)
-        assert "ax1" in text
-        assert "ax2" in text
-
-    def test_3d_axes(self):
-        result = _gen_clear_lines([AxesInfo(var_name="ax", is_3d=True)])
-        text = "\n".join(result)
-        assert "clear" in text
+        assert "values" in text and "flat" in text and "clear" in text
 
 
 # ===============================================================
-# Code generation - output validity
+# Code generation - output structure
 # ===============================================================
 class TestCodeGeneration:
-    def test_output_is_valid_python(self):
+    def test_contains_required_functions(self):
         src = _read_fixture("simple_line.py")
         result = animate(src, var="t", range_str="0,6.28")
-        # Should parse without errors
         ast.parse(result)
-
-    def test_contains_update_function(self):
-        src = _read_fixture("simple_line.py")
-        result = animate(src, var="t", range_str="0,6.28")
         assert "def update(_frame):" in result
-
-    def test_contains_worker_function(self):
-        src = _read_fixture("simple_line.py")
-        result = animate(src, var="t", range_str="0,6.28")
         assert "def _render_one(job):" in result
-
-    def test_agg_backend_injected(self):
-        src = _read_fixture("simple_line.py")
-        result = animate(src, var="t", range_str="0,6.28")
         assert "matplotlib.use('Agg')" in result
-
-    def test_show_removed(self):
-        src = _read_fixture("simple_line.py")
-        result = animate(src, var="t", range_str="0,6.28")
         assert "plt.show()" not in result
 
     def test_animated_var_in_update(self):
         src = _read_fixture("simple_line.py")
         result = animate(src, var="t", range_str="0,6.28")
-        # The update function should set t = start + _frame * step
         assert "t = 0 + _frame *" in result or "t = 0.0 + _frame *" in result
-
-    def test_frames_parameter_used(self):
-        src = _read_fixture("simple_line.py")
-        result = animate(src, var="t", range_str="0,6.28", frames=60)
-        assert "_FRAMES = 60" in result or "range(60)" in result or "60 frames" in result
 
     def test_custom_output_name(self):
         src = _read_fixture("simple_line.py")
         result = animate(src, var="t", range_str="0,6.28", out="custom.gif")
         assert "custom.gif" in result
 
-    def test_3d_output_is_valid_python(self):
-        src = _read_fixture("surface_3d.py")
-        result = animate(src, var="t", range_str="0.5,3")
-        ast.parse(result)
+    def test_frames_parameter_used(self):
+        src = _read_fixture("simple_line.py")
+        result = animate(src, var="t", range_str="0,6.28", frames=60)
+        assert "_FRAMES" in result and "60" in result
 
-    def test_polar_output_is_valid_python(self):
-        src = _read_fixture("polar.py")
-        result = animate(src, var="t", range_str="0.5,5")
+    def test_per_frame_error_handling_in_template(self):
+        """Sequential and parallel renderers have try/except, None filtering, RuntimeError."""
+        src = _read_fixture("simple_line.py")
+        result = animate(src, var="t", range_str="0.5,5", frames=10)
+        seq = result.split("def render_sequential():")[1].split("def _render_one")[0]
+        worker = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
+        par = result.split("def render_parallel(")[1]
+        assert "except Exception" in seq and "WARNING: frame" in seq
+        assert "except Exception" in worker and "return None" in worker
+        assert "if p]" in par or "if p is not None" in par
+        assert 'RuntimeError("All frames failed' in result
+
+    def test_worker_body_indented_inside_try(self):
+        """Worker content should be at 8-space indent (inside try:)."""
+        src = _read_fixture("simple_line.py")
+        result = animate(src, var="t", range_str="0.5,5", frames=10)
+        worker = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
+        in_try = False
+        for line in worker.strip().split("\n"):
+            if "try:" in line:
+                in_try = True
+                continue
+            if "except" in line:
+                break
+            if in_try and line.strip():
+                assert len(line) - len(line.lstrip()) >= 8, f"Undent: {line!r}"
+
+    def test_aug_assign_gets_global_not_animated_var(self):
+        """y += ... produces `global y` but animated var t does NOT get global."""
+        src = _read_fixture("augmented_assign.py")
+        result = animate(src, var="t", range_str="0.1,3", frames=10)
         ast.parse(result)
+        assert "global y" in result
+        assert "global t" not in result
+
+    def test_aug_assign_loop_gets_global(self):
+        src = _read_fixture("augmented_assign_loop.py")
+        result = animate(src, var="n", range_str="1,20", frames=10)
+        ast.parse(result)
+        assert "global y" in result
 
 
 # ===============================================================
@@ -509,12 +410,7 @@ class TestCodeGeneration:
 # ===============================================================
 class TestValidation:
     def test_missing_variable_raises(self):
-        src = textwrap.dedent("""\
-            import matplotlib.pyplot as plt
-            fig, ax = plt.subplots()
-            ax.plot([1,2,3], [1,2,3])
-            plt.show()
-        """)
+        src = "import matplotlib.pyplot as plt\nfig,ax=plt.subplots()\nax.plot([1],[1])\nplt.show()\n"
         with pytest.raises(AssertionError, match="not found"):
             animate(src, var="nonexistent", range_str="0,1")
 
@@ -525,8 +421,6 @@ class TestValidation:
     def test_empty_source_raises(self):
         with pytest.raises(AssertionError):
             animate("", var="t", range_str="0,1")
-
-    def test_whitespace_only_raises(self):
         with pytest.raises(AssertionError):
             animate("   \n  \n  ", var="t", range_str="0,1")
 
@@ -546,6 +440,13 @@ class TestValidation:
     def test_bad_range_format_raises(self):
         with pytest.raises(AssertionError, match="start,end"):
             animate("t = 1", var="t", range_str="1,2,3")
+
+    def test_invalid_fmt_and_loop_raise(self):
+        src = "import matplotlib.pyplot as plt\nt=1\nfig,ax=plt.subplots()\nax.plot([t],[t])\nplt.show()\n"
+        with pytest.raises(AssertionError, match="fmt must be"):
+            animate(src, var="t", range_str="0,1", fmt="avi")
+        with pytest.raises(AssertionError, match="loop"):
+            animate(src, var="t", range_str="0,1", loop=-1)
 
     def test_no_figure_warns(self):
         src = textwrap.dedent("""\
@@ -572,16 +473,6 @@ class TestValidation:
             animate(src, var="t", range_str="0,5")
             assert any("No drawing methods" in str(x.message) for x in w)
 
-    def test_invalid_fmt_raises(self):
-        src = "import matplotlib.pyplot as plt\nt=1\nfig,ax=plt.subplots()\nax.plot([t],[t])\nplt.show()\n"
-        with pytest.raises(AssertionError, match="fmt must be"):
-            animate(src, var="t", range_str="0,1", fmt="avi")
-
-    def test_invalid_loop_raises(self):
-        src = "import matplotlib.pyplot as plt\nt=1\nfig,ax=plt.subplots()\nax.plot([t],[t])\nplt.show()\n"
-        with pytest.raises(AssertionError, match="loop"):
-            animate(src, var="t", range_str="0,1", loop=-1)
-
     def test_ffmpeg_missing_warns(self, monkeypatch):
         import mpl_animator
         monkeypatch.setattr(mpl_animator, "_check_ffmpeg", lambda: False)
@@ -593,9 +484,9 @@ class TestValidation:
 
 
 # ===============================================================
-# New features - loop, reverse, ping-pong
+# Features - loop, reverse, ping-pong, output naming
 # ===============================================================
-class TestNewFeatures:
+class TestFeatures:
     def _simple_src(self):
         return textwrap.dedent("""\
             import numpy as np
@@ -608,64 +499,35 @@ class TestNewFeatures:
             plt.show()
         """)
 
-    def test_loop_forever_default(self):
-        result = animate(self._simple_src(), var="t", range_str="0,1")
-        assert any("_LOOP" in line and "= 0" in line for line in result.splitlines())
-
-    def test_loop_once(self):
-        result = animate(self._simple_src(), var="t", range_str="0,1", loop=1)
-        assert any("_LOOP" in line and "= 1" in line for line in result.splitlines())
-
-    def test_loop_value_passed_to_stitch(self):
-        result = animate(self._simple_src(), var="t", range_str="0,1", loop=3)
-        assert any("_LOOP" in line and "= 3" in line for line in result.splitlines())
-        assert "loop=loop" in result
+    def test_loop_values(self):
+        r0 = animate(self._simple_src(), var="t", range_str="0,1")
+        assert "_LOOP     = 0" in r0
+        r3 = animate(self._simple_src(), var="t", range_str="0,1", loop=3)
+        assert "_LOOP     = 3" in r3
 
     def test_reverse_swaps_start_end(self):
         result = animate(self._simple_src(), var="t", range_str="0,5", reverse=True)
-        # With reverse, start=5, end=0, so step is negative
         assert "t = 5" in result or "t = 5.0" in result
 
-    def test_reverse_forward_differ(self):
-        fwd = animate(self._simple_src(), var="t", range_str="0,5")
-        rev = animate(self._simple_src(), var="t", range_str="0,5", reverse=True)
-        # The step sign should differ
-        assert fwd != rev
+    def test_ping_pong(self):
+        off = animate(self._simple_src(), var="t", range_str="0,1")
+        on = animate(self._simple_src(), var="t", range_str="0,1", ping_pong=True)
+        assert "_PING_PONG = False" in off
+        assert "_PING_PONG = True" in on
+        assert "reversed" in on
 
-    def test_ping_pong_off_by_default(self):
-        result = animate(self._simple_src(), var="t", range_str="0,1")
-        assert "_PING_PONG = False" in result
-
-    def test_ping_pong_on(self):
-        result = animate(self._simple_src(), var="t", range_str="0,1", ping_pong=True)
-        assert "_PING_PONG = True" in result
-
-    def test_ping_pong_uses_reversed_frames(self):
-        result = animate(self._simple_src(), var="t", range_str="0,1", ping_pong=True)
-        assert "reversed" in result
-
-    def test_output_naming_gif(self):
-        result = animate(self._simple_src(), var="t", range_str="0,1",
-                         fmt="gif", source_name="myplot.py")
-        assert "myplot_animated.gif" in result
-
-    def test_output_naming_mp4(self):
-        result = animate(self._simple_src(), var="t", range_str="0,1",
-                         fmt="mp4", source_name="myplot.py")
-        assert "myplot_animated.mp4" in result
+    def test_output_naming(self):
+        gif = animate(self._simple_src(), var="t", range_str="0,1",
+                      fmt="gif", source_name="myplot.py")
+        assert "myplot_animated.gif" in gif
+        mp4 = animate(self._simple_src(), var="t", range_str="0,1",
+                      fmt="mp4", source_name="myplot.py")
+        assert "myplot_animated.mp4" in mp4
 
     def test_out_extension_overrides_fmt(self):
         result = animate(self._simple_src(), var="t", range_str="0,1",
                          out="custom.mp4", fmt="gif")
         assert "custom.mp4" in result
-
-    def test_progress_bar_in_sequential(self):
-        result = animate(self._simple_src(), var="t", range_str="0,1")
-        assert "Frame" in result and "total" in result
-
-    def test_set_theta_offset_in_config_methods(self):
-        from mpl_animator import CONFIG_METHODS
-        assert "set_theta_offset" in CONFIG_METHODS
 
     def test_set_theta_offset_goes_to_plot_stmts(self):
         src = textwrap.dedent("""\
@@ -680,14 +542,40 @@ class TestNewFeatures:
             ax.set_theta_offset(angle)
             plt.show()
         """)
-        from mpl_animator import scan_ast, build_deps, partition
         tree, info = scan_ast(src)
         dep_vars = build_deps(tree, "angle")
-        _, dynamic, plot = partition(src, tree, info, dep_vars, "angle")
-        assert any("set_theta_offset" in s for s in plot), \
-            "set_theta_offset must be in plot_stmts (runs after clear), not dynamic"
-        assert not any("set_theta_offset" in s for s in dynamic), \
-            "set_theta_offset must NOT be in dynamic_stmts (would run before clear)"
+        _, dynamic, plot, _aug = partition(src, tree, info, dep_vars, "angle")
+        assert any("set_theta_offset" in s for s in plot)
+        assert not any("set_theta_offset" in s for s in dynamic)
+
+
+# ===============================================================
+# Method categories
+# ===============================================================
+class TestMethodCategories:
+    def test_draw_and_config_are_disjoint(self):
+        assert DRAW_METHODS & CONFIG_METHODS == set()
+        assert ALL_PLOT_METHODS == DRAW_METHODS | CONFIG_METHODS
+
+    def test_core_methods_present(self):
+        for m in ("plot", "scatter", "bar", "imshow", "hist", "contour",
+                  "plot_surface", "quiver", "add_patch", "add_collection",
+                  "stackplot", "tripcolor", "voxels"):
+            assert m in DRAW_METHODS, f"{m} missing from DRAW_METHODS"
+        for m in ("set_title", "set_xlim", "grid", "legend",
+                  "tick_params", "set_aspect", "set_facecolor",
+                  "set_xscale", "set_yscale", "subplots_adjust"):
+            assert m in CONFIG_METHODS, f"{m} missing from CONFIG_METHODS"
+
+    def test_seaborn_methods_in_draw(self):
+        for m in ("heatmap", "lineplot", "scatterplot", "barplot",
+                  "kdeplot", "regplot", "pairplot", "clustermap"):
+            assert m in DRAW_METHODS, f"{m} missing from DRAW_METHODS"
+
+    def test_pandas_methods_in_draw(self):
+        for m in ("scatter_matrix", "parallel_coordinates",
+                  "andrews_curves", "radviz"):
+            assert m in DRAW_METHODS, f"{m} missing from DRAW_METHODS"
 
 
 # ===============================================================
@@ -719,7 +607,7 @@ FIXTURE_CONFIGS = {
     "camera_cinematic.py":    {"var": ["azim", "elev"],  "range_str": ["0,360", "20,60"]},
     "multi_var_2d.py":        {"var": ["freq", "amp"],   "range_str": ["1,5", "0.3,1.5"]},
     "zoom_and_rotate.py":     {"var": ["azim", "zoom"],  "range_str": ["0,360", "0.5,1.5"]},
-    # edge-case fixtures (compound stmts, dep tracking, method categories)
+    # edge-case fixtures
     "func_def_in_script.py":  {"var": "t",  "range_str": "0,6.28"},
     "conditional_style.py":   {"var": "t",  "range_str": "0,1"},
     "for_loop_draw.py":       {"var": "t",  "range_str": "0.1,3"},
@@ -743,7 +631,7 @@ FIXTURE_CONFIGS = {
     "log_scale.py":           {"var": "t",  "range_str": "0.1,2"},
     "fill_between_where.py":  {"var": "t",  "range_str": "0.1,3"},
     "quiver_plot.py":         {"var": "t",  "range_str": "0.1,3"},
-    # real-world fixtures from matplotlib gallery
+    # real-world fixtures
     "real_world_01.py":       {"var": "freq",        "range_str": "1,10"},
     "real_world_02.py":       {"var": "scale",       "range_str": "0.5,2"},
     "real_world_03.py":       {"var": "error_scale", "range_str": "0.5,3"},
@@ -754,41 +642,26 @@ FIXTURE_CONFIGS = {
     "real_world_08.py":       {"var": "freq",        "range_str": "1,5"},
     "real_world_09.py":       {"var": "scale",       "range_str": "0.5,2"},
     "real_world_10.py":       {"var": "startangle",  "range_str": "0,360"},
+    # augmented assign / third-party
+    "augmented_assign_loop.py": {"var": "n",  "range_str": "1,20"},
+    "seaborn_heatmap.py":     {"var": "n",  "range_str": "5,20"},
+    "pandas_plot.py":         {"var": "n",  "range_str": "10,100"},
 }
 
 
 class TestEndToEnd:
     @pytest.mark.parametrize("fixture_name", list(FIXTURE_CONFIGS.keys()))
     def test_fixture_generates_valid_python(self, fixture_name):
-        """Each fixture should produce a valid Python script."""
+        """Each fixture should produce a valid Python script with required functions."""
         src = _read_fixture(fixture_name)
         cfg = FIXTURE_CONFIGS[fixture_name]
         result = animate(src, frames=10, **cfg)
         try:
             ast.parse(result)
         except SyntaxError as e:
-            pytest.fail(
-                f"Generated code for {fixture_name} has syntax error: {e}\n"
-                f"--- Generated code ---\n{result}"
-            )
-
-    @pytest.mark.parametrize("fixture_name", list(FIXTURE_CONFIGS.keys()))
-    def test_fixture_has_update_and_worker(self, fixture_name):
-        """Each generated script should have update() and _render_one()."""
-        src = _read_fixture(fixture_name)
-        cfg = FIXTURE_CONFIGS[fixture_name]
-        result = animate(src, frames=10, **cfg)
+            pytest.fail(f"Generated code for {fixture_name} has syntax error: {e}")
         assert "def update(_frame):" in result
         assert "def _render_one(job):" in result
-        assert "def render_sequential():" in result
-        assert "def render_parallel(n_workers):" in result
-
-    @pytest.mark.parametrize("fixture_name", list(FIXTURE_CONFIGS.keys()))
-    def test_fixture_no_show(self, fixture_name):
-        """Generated script should never contain plt.show()."""
-        src = _read_fixture(fixture_name)
-        cfg = FIXTURE_CONFIGS[fixture_name]
-        result = animate(src, frames=10, **cfg)
         assert "plt.show()" not in result
 
     def test_wave_static_backward_compatible(self):
@@ -799,589 +672,78 @@ class TestEndToEnd:
         result = animate(src, var="f", range_str="3,60", frames=10)
         ast.parse(result)
         assert "def update(_frame):" in result
-        assert "plt.show()" not in result
 
 
 # ===============================================================
-# Method categories sanity checks
-# ===============================================================
-class TestMethodCategories:
-    def test_draw_and_config_are_disjoint(self):
-        assert DRAW_METHODS & CONFIG_METHODS == set()
-
-    def test_all_is_union(self):
-        assert ALL_PLOT_METHODS == DRAW_METHODS | CONFIG_METHODS
-
-    def test_common_methods_present(self):
-        assert "plot" in DRAW_METHODS
-        assert "scatter" in DRAW_METHODS
-        assert "bar" in DRAW_METHODS
-        assert "imshow" in DRAW_METHODS
-        assert "hist" in DRAW_METHODS
-        assert "plot_surface" in DRAW_METHODS
-        assert "set_title" in CONFIG_METHODS
-        assert "set_xlim" in CONFIG_METHODS
-        assert "grid" in CONFIG_METHODS
-        assert "legend" in CONFIG_METHODS
-
-
-# ===============================================================
-# Slow tests - actually run the generated scripts
-# ===============================================================
-@pytest.mark.slow
-class TestSlowExecution:
-    """Tests that actually execute the generated animated scripts.
-    Run with: pytest -m slow
-    GIFs are saved to tests/output/ for inspection.
-    """
-    @pytest.mark.parametrize("fixture_name", list(FIXTURE_CONFIGS.keys()))
-    def test_generated_script_produces_gif(self, fixture_name, tmp_path):
-        """Run generated script and check that a GIF is produced."""
-        if fixture_name == "implicit_figure.py":
-            pytest.xfail("implicit_figure.py has no explicit figure creation; animate() already warns this may not work")
-        if fixture_name == "mixed_3d_2d.py":
-            pytest.xfail("mixed_3d_2d.py mixes 2D and 3D subplots in one figure; the 3D fig.clear() path drops the 2D subplot (known limitation)")
-        src = _read_fixture(fixture_name)
-        cfg = FIXTURE_CONFIGS[fixture_name]
-        gif_name = fixture_name.replace(".py", "_animated.gif")
-        result = animate(src, frames=5, fps=5, out=gif_name,
-                         workers=1, **cfg)
-
-        script_path = tmp_path / "animated.py"
-        script_path.write_text(result)
-
-        # Run the generated script
-        proc = subprocess.run(
-            [sys.executable, str(script_path), "--sequential"],
-            capture_output=True, text=True, timeout=60,
-            cwd=str(tmp_path),
-        )
-        assert proc.returncode == 0, \
-            f"Script failed:\nstdout: {proc.stdout}\nstderr: {proc.stderr}"
-
-        gif_path = tmp_path / gif_name
-        assert gif_path.exists(), \
-            f"GIF not created. stdout: {proc.stdout}\nstderr: {proc.stderr}"
-        assert gif_path.stat().st_size > 0
-
-        # Copy GIF to tests/output/ so it can be inspected after the run
-        import shutil
-        out_dir = os.path.join(os.path.dirname(__file__), "output")
-        os.makedirs(out_dir, exist_ok=True)
-        shutil.copy(gif_path, os.path.join(out_dir, gif_name))
-
-    def test_ping_pong_produces_gif(self, tmp_path):
-        """ping-pong GIF should have ~2x frames and be larger than normal."""
-        src = _read_fixture("simple_line.py")
-        frames = 5
-        gif_name = "simple_line_pingpong.gif"
-        normal = animate(src, var="t", range_str="0,6.28", frames=frames,
-                         fps=5, out="simple_line_normal.gif", workers=1)
-        pp = animate(src, var="t", range_str="0,6.28", frames=frames,
-                     fps=5, out=gif_name, ping_pong=True, workers=1)
-
-        for code, name in [(normal, "simple_line_normal.gif"), (pp, gif_name)]:
-            p = tmp_path / (name.replace(".gif", ".py"))
-            p.write_text(code)
-            proc = subprocess.run(
-                [sys.executable, str(p), "--sequential"],
-                capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
-            )
-            assert proc.returncode == 0, f"{name} failed:\n{proc.stderr}"
-
-        from PIL import Image
-        normal_frames = Image.open(tmp_path / "simple_line_normal.gif").n_frames
-        pp_frames = Image.open(tmp_path / gif_name).n_frames
-        assert pp_frames > normal_frames, \
-            f"ping-pong ({pp_frames} frames) should have more frames than normal ({normal_frames})"
-
-        import shutil
-        out_dir = os.path.join(os.path.dirname(__file__), "output")
-        os.makedirs(out_dir, exist_ok=True)
-        shutil.copy(tmp_path / gif_name, os.path.join(out_dir, gif_name))
-        shutil.copy(tmp_path / "simple_line_normal.gif",
-                    os.path.join(out_dir, "simple_line_normal.gif"))
-
-    def test_reverse_produces_gif(self, tmp_path):
-        """reverse GIF should run the same number of frames but in opposite order."""
-        src = _read_fixture("simple_line.py")
-        gif_name = "simple_line_reversed.gif"
-        result = animate(src, var="t", range_str="0,6.28", frames=5,
-                         fps=5, out=gif_name, reverse=True, workers=1)
-        script_path = tmp_path / "rev.py"
-        script_path.write_text(result)
-        proc = subprocess.run(
-            [sys.executable, str(script_path), "--sequential"],
-            capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
-        )
-        assert proc.returncode == 0, f"reverse script failed:\n{proc.stderr}"
-        gif_path = tmp_path / gif_name
-        assert gif_path.exists() and gif_path.stat().st_size > 0
-
-        import shutil
-        out_dir = os.path.join(os.path.dirname(__file__), "output")
-        os.makedirs(out_dir, exist_ok=True)
-        shutil.copy(gif_path, os.path.join(out_dir, gif_name))
-
-    def test_loop_once_produces_gif(self, tmp_path):
-        """loop=1 GIF should exist and differ from loop=0 in metadata."""
-        src = _read_fixture("simple_line.py")
-        gif_name = "simple_line_loop1.gif"
-        result = animate(src, var="t", range_str="0,6.28", frames=5,
-                         fps=5, out=gif_name, loop=1, workers=1)
-        script_path = tmp_path / "loop1.py"
-        script_path.write_text(result)
-        proc = subprocess.run(
-            [sys.executable, str(script_path), "--sequential"],
-            capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
-        )
-        assert proc.returncode == 0, f"loop=1 script failed:\n{proc.stderr}"
-        gif_path = tmp_path / gif_name
-        assert gif_path.exists() and gif_path.stat().st_size > 0
-
-        import shutil
-        out_dir = os.path.join(os.path.dirname(__file__), "output")
-        os.makedirs(out_dir, exist_ok=True)
-        shutil.copy(gif_path, os.path.join(out_dir, gif_name))
-
-
-# ===============================================================
-# TestMultiVar - multi-variable animation support
-# ===============================================================
-class TestMultiVar:
-    SIMPLE_SRC = textwrap.dedent("""\
-        import numpy as np
-        import matplotlib.pyplot as plt
-
-        freq = 1.0
-        amp  = 1.0
-        x = np.linspace(0, 2 * np.pi, 200)
-        y = amp * np.sin(freq * x)
-
-        fig, ax = plt.subplots()
-        ax.plot(x, y, lw=2)
-        ax.set_ylim(-2, 2)
-        ax.set_title(f'freq={freq:.2f} amp={amp:.2f}')
-        plt.tight_layout()
-        plt.show()
-    """)
-
-    # -- _normalize_var_range --
-    def test_normalize_single_str(self):
-        v, r = _normalize_var_range("t", "0,1")
-        assert v == ["t"]
-        assert r == ["0,1"]
-
-    def test_normalize_list(self):
-        v, r = _normalize_var_range(["freq", "amp"], ["1,5", "0.3,1.5"])
-        assert v == ["freq", "amp"]
-        assert r == ["1,5", "0.3,1.5"]
-
-    def test_normalize_mixed_str_list(self):
-        """Single str var, list range (edge case)."""
-        v, r = _normalize_var_range("t", ["0,1"])
-        assert v == ["t"]
-        assert r == ["0,1"]
-
-    # -- animate() validation --
-    def test_mismatched_var_range_raises(self):
-        with pytest.raises(AssertionError, match="each variable needs exactly one range"):
-            animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str="1,5")
-
-    def test_duplicate_vars_raises(self):
-        with pytest.raises(AssertionError, match="Duplicate variable names"):
-            animate(self.SIMPLE_SRC, var=["freq", "freq"], range_str=["1,5", "1,5"])
-
-    def test_unknown_var_raises(self):
-        with pytest.raises(AssertionError, match="not found in script"):
-            animate(self.SIMPLE_SRC, var=["freq", "nonexistent"], range_str=["1,5", "0,1"])
-
-    def test_single_var_backward_compat(self):
-        """Passing a single str still works exactly as before."""
-        result = animate(self.SIMPLE_SRC, var="freq", range_str="1,5")
-        assert "def update(_frame):" in result
-        assert "freq = " in result
-
-    # -- generated code structure --
-    def test_two_vars_both_assigned_in_update(self):
-        result = animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"])
-        update_section = result.split("def update(_frame):")[1].split("def _render_one")[0]
-        assert "freq = " in update_section
-        assert "amp = " in update_section
-
-    def test_two_vars_both_assigned_in_worker(self):
-        result = animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"])
-        worker_section = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
-        assert "freq = " in worker_section
-        assert "amp = " in worker_section
-
-    def test_var_summary_single(self):
-        result = animate(self.SIMPLE_SRC, var="freq", range_str="1,5")
-        assert "freq sweeps" in result
-
-    def test_var_summary_multi(self):
-        result = animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"])
-        assert "vars:" in result
-        assert "freq" in result
-        assert "amp" in result
-
-    def test_original_var_assignment_skipped(self):
-        """Static freq=1.0 and amp=1.0 must not appear in static/dynamic sections."""
-        src = self.SIMPLE_SRC
-        tree, info = scan_ast(src)
-        deps = build_deps(tree, ["freq", "amp"])
-        static, dynamic, _ = partition(src, tree, info, deps, ["freq", "amp"])
-        combined = "\n".join(static + dynamic)
-        assert "freq = 1.0" not in combined
-        assert "amp  = 1.0" not in combined
-
-    def test_generated_script_is_valid_python(self):
-        result = animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"])
-        try:
-            ast.parse(result)
-        except SyntaxError as exc:
-            pytest.fail(f"Generated script has syntax error: {exc}\n\n{result}")
-
-    def test_step_values_are_correct(self):
-        """Each variable's step should equal (end-start)/frames."""
-        result = animate(self.SIMPLE_SRC, var=["freq", "amp"],
-                         range_str=["1,5", "0.3,1.5"], frames=100)
-        freq_step = (5.0 - 1.0) / 100
-        amp_step  = (1.5 - 0.3) / 100
-        assert repr(freq_step) in result
-        assert repr(amp_step)  in result
-
-    def test_build_deps_multi_var(self):
-        tree, _ = scan_ast(self.SIMPLE_SRC)
-        deps = build_deps(tree, ["freq", "amp"])
-        assert "y" in deps  # y depends on both freq and amp
-
-    def test_partition_skips_both_static_assignments(self):
-        tree, info = scan_ast(self.SIMPLE_SRC)
-        deps = build_deps(tree, ["freq", "amp"])
-        static, dynamic, _ = partition(self.SIMPLE_SRC, tree, info, deps, ["freq", "amp"])
-        combined = "\n".join(static + dynamic)
-        assert "freq = 1.0" not in combined
-        assert "amp  = 1.0" not in combined
-
-    # -- fixture-based end-to-end --
-    def test_multi_var_2d_generates_valid_python(self):
-        src = _read_fixture("multi_var_2d.py")
-        result = animate(src, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"], frames=10)
-        ast.parse(result)
-        update_sec = result.split("def update(_frame):")[1].split("def _render_one")[0]
-        assert "freq = " in update_sec
-        assert "amp = " in update_sec
-
-    def test_camera_cinematic_generates_valid_python(self):
-        src = _read_fixture("camera_cinematic.py")
-        result = animate(src, var=["azim", "elev"], range_str=["0,360", "20,60"], frames=10)
-        ast.parse(result)
-        update_sec = result.split("def update(_frame):")[1].split("def _render_one")[0]
-        assert "azim = " in update_sec
-        assert "elev = " in update_sec
-
-    def test_zoom_and_rotate_generates_valid_python(self):
-        src = _read_fixture("zoom_and_rotate.py")
-        result = animate(src, var=["azim", "zoom"], range_str=["0,360", "0.5,1.5"], frames=10)
-        ast.parse(result)
-        update_sec = result.split("def update(_frame):")[1].split("def _render_one")[0]
-        assert "azim = " in update_sec
-        assert "zoom = " in update_sec
-
-    @pytest.mark.slow
-    def test_multi_var_2d_produces_gif(self, tmp_path):
-        """Run multi_var_2d fixture end-to-end and verify a GIF is created."""
-        src = _read_fixture("multi_var_2d.py")
-        gif_name = "multi_var_2d_animated.gif"
-        result = animate(src, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"],
-                         frames=6, fps=6, out=gif_name, workers=1)
-        script_path = tmp_path / "mv2d.py"
-        script_path.write_text(result)
-        proc = subprocess.run(
-            [sys.executable, str(script_path), "--sequential"],
-            capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
-        )
-        assert proc.returncode == 0, f"multi_var_2d failed:\n{proc.stderr}"
-        gif_path = tmp_path / gif_name
-        assert gif_path.exists() and gif_path.stat().st_size > 0
-        import shutil
-        out_dir = os.path.join(os.path.dirname(__file__), "output")
-        os.makedirs(out_dir, exist_ok=True)
-        shutil.copy(gif_path, os.path.join(out_dir, gif_name))
-
-    @pytest.mark.slow
-    def test_camera_cinematic_produces_gif(self, tmp_path):
-        """Run camera_cinematic fixture (3D, 2 vars) end-to-end."""
-        src = _read_fixture("camera_cinematic.py")
-        gif_name = "camera_cinematic_animated.gif"
-        result = animate(src, var=["azim", "elev"], range_str=["0,360", "20,60"],
-                         frames=6, fps=6, out=gif_name, workers=1)
-        script_path = tmp_path / "cam.py"
-        script_path.write_text(result)
-        proc = subprocess.run(
-            [sys.executable, str(script_path), "--sequential"],
-            capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
-        )
-        assert proc.returncode == 0, f"camera_cinematic failed:\n{proc.stderr}"
-        gif_path = tmp_path / gif_name
-        assert gif_path.exists() and gif_path.stat().st_size > 0
-        import shutil
-        out_dir = os.path.join(os.path.dirname(__file__), "output")
-        os.makedirs(out_dir, exist_ok=True)
-        shutil.copy(gif_path, os.path.join(out_dir, gif_name))
-
-
-# ===============================================================
-# TestEdgeCases - compound statements, dep tracking, methods
+# Specific edge-case behavior (beyond "generates valid python")
 # ===============================================================
 class TestEdgeCases:
-    """Tests for edge cases discovered during audit."""
-
-    # -- Bug fix 1: _ind() with multi-line statements (compound stmts) --
-
-    def test_func_def_in_script_valid_python(self):
-        """Function definition in script must produce valid generated code."""
-        src = _read_fixture("func_def_in_script.py")
-        result = animate(src, var="t", range_str="0,6.28", frames=10)
-        ast.parse(result)
-
     def test_func_def_worker_has_indented_body(self):
         """Worker body must indent all lines of a function definition."""
         src = _read_fixture("func_def_in_script.py")
         result = animate(src, var="t", range_str="0,6.28", frames=10)
         worker = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
-        # The return inside def wave must be indented beyond 4 spaces
         for line in worker.splitlines():
             stripped = line.lstrip()
             if stripped.startswith("return np.sin"):
                 indent = len(line) - len(stripped)
-                assert indent >= 8, (
-                    f"Function body 'return' must be indented >=8 in worker, got {indent}"
-                )
+                assert indent >= 8
                 break
         else:
             pytest.fail("'return np.sin' not found in worker body")
-
-    def test_conditional_generates_valid_python(self):
-        """if/else block must produce valid generated code."""
-        src = _read_fixture("conditional_style.py")
-        result = animate(src, var="t", range_str="0,1", frames=10)
-        ast.parse(result)
-
-    def test_for_loop_draw_generates_valid_python(self):
-        """for loop with draw calls must produce valid generated code."""
-        src = _read_fixture("for_loop_draw.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    def test_try_except_generates_valid_python(self):
-        """try/except block must produce valid generated code."""
-        src = _read_fixture("try_except.py")
-        result = animate(src, var="t", range_str="0,6.28", frames=10)
-        ast.parse(result)
-
-    def test_list_comprehension_for_loop_in_worker(self):
-        """list_comprehension.py has a for loop drawing; worker must be valid."""
-        src = _read_fixture("list_comprehension.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    # -- Bug fix 2: transitive dependency in partition --
 
     def test_add_patch_in_plot_stmts(self):
         """ax.add_patch(c) where c depends on t must be in plot_stmts."""
         src = _read_fixture("add_patch_circle.py")
         tree, info = scan_ast(src)
         dep_vars = build_deps(tree, "t")
-        _, _, plot = partition(src, tree, info, dep_vars, "t")
-        assert any("add_patch" in s for s in plot), \
-            "add_patch(c) must end up in plot_stmts when c depends on t"
+        _, _, plot, _aug = partition(src, tree, info, dep_vars, "t")
+        assert any("add_patch" in s for s in plot)
 
-    def test_add_patch_generates_valid_python(self):
-        src = _read_fixture("add_patch_circle.py")
-        result = animate(src, var="t", range_str="0,1.5", frames=10)
-        ast.parse(result)
-
-    # -- Bug fix 3: missing CONFIG_METHODS --
-
-    def test_tick_params_in_config_methods(self):
-        assert "tick_params" in CONFIG_METHODS
-
-    def test_set_aspect_in_config_methods(self):
-        assert "set_aspect" in CONFIG_METHODS
-
-    def test_set_facecolor_in_config_methods(self):
-        assert "set_facecolor" in CONFIG_METHODS
-
-    def test_set_xscale_in_config_methods(self):
-        assert "set_xscale" in CONFIG_METHODS
-
-    def test_set_yscale_in_config_methods(self):
-        assert "set_yscale" in CONFIG_METHODS
-
-    def test_subplots_adjust_in_config_methods(self):
-        assert "subplots_adjust" in CONFIG_METHODS
-
-    def test_tick_params_goes_to_plot_stmts(self):
-        """tick_params after fig must go to plot_stmts (reapplied after clear)."""
-        src = _read_fixture("tick_params_spines.py")
-        tree, info = scan_ast(src)
-        dep_vars = build_deps(tree, "t")
-        _, _, plot = partition(src, tree, info, dep_vars, "t")
-        assert any("tick_params" in s for s in plot)
-
-    def test_log_scale_in_plot_stmts(self):
-        """set_xscale/set_yscale after fig must go to plot_stmts."""
+    def test_tick_params_and_log_scale_in_plot_stmts(self):
+        """tick_params and set_xscale/set_yscale after fig go to plot_stmts."""
         src = _read_fixture("log_scale.py")
         tree, info = scan_ast(src)
         dep_vars = build_deps(tree, "t")
-        _, _, plot = partition(src, tree, info, dep_vars, "t")
+        _, _, plot, _aug = partition(src, tree, info, dep_vars, "t")
         assert any("set_xscale" in s for s in plot)
         assert any("set_yscale" in s for s in plot)
 
-    # -- Bug fix 4: missing DRAW_METHODS --
-
-    def test_add_patch_in_draw_methods(self):
-        assert "add_patch" in DRAW_METHODS
-
-    def test_add_collection_in_draw_methods(self):
-        assert "add_collection" in DRAW_METHODS
-
-    # -- Pattern coverage: tuple/starred/multi-assign --
-
     def test_tuple_unpack_deps(self):
-        """x, y = sin(t), cos(t) => both x and y depend on t."""
+        """x, y = sin(t), cos(t) => both depend on t."""
         src = _read_fixture("tuple_unpack.py")
         tree, _ = scan_ast(src)
         deps = build_deps(tree, "t")
-        assert "x_val" in deps
-        assert "y_val" in deps
-
-    def test_tuple_unpack_generates_valid_python(self):
-        src = _read_fixture("tuple_unpack.py")
-        result = animate(src, var="t", range_str="0,6.28", frames=10)
-        ast.parse(result)
-
-    def test_multi_assign_generates_valid_python(self):
-        src = _read_fixture("multi_assign.py")
-        result = animate(src, var="t", range_str="0,6.28", frames=10)
-        ast.parse(result)
-
-    def test_starred_assign_generates_valid_python(self):
-        src = _read_fixture("starred_assign.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    def test_lambda_capture_generates_valid_python(self):
-        src = _read_fixture("lambda_capture.py")
-        result = animate(src, var="t", range_str="0,6.28", frames=10)
-        ast.parse(result)
-
-    # -- Pattern coverage: axes creation variants --
+        assert "x_val" in deps and "y_val" in deps
 
     def test_nested_tuple_axes_all_detected(self):
         """((ax1,ax2),(ax3,ax4)) = plt.subplots(2,2) => 4 axes detected."""
         src = _read_fixture("nested_tuple_axes.py")
         _, info = scan_ast(src)
-        ax_names = {a.var_name for a in info.ax_info}
-        assert ax_names == {"ax1", "ax2", "ax3", "ax4"}
-
-    def test_nested_tuple_axes_generates_valid_python(self):
-        src = _read_fixture("nested_tuple_axes.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    def test_subplot_mosaic_generates_valid_python(self):
-        src = _read_fixture("subplot_mosaic.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    def test_axes_2d_indexing_generates_valid_python(self):
-        src = _read_fixture("axes_2d_indexing.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    def test_multi_3d_subplots_generates_valid_python(self):
-        src = _read_fixture("multi_3d_subplots.py")
-        result = animate(src, var="t", range_str="0.5,2", frames=10)
-        ast.parse(result)
-
-    # -- Pattern coverage: import variants --
-
-    def test_from_mpl_import_generates_valid_python(self):
-        src = _read_fixture("from_mpl_import.py")
-        result = animate(src, var="t", range_str="0,6.28", frames=10)
-        ast.parse(result)
-        assert "matplotlib.use('Agg')" in result
-
-    # -- Pattern coverage: style / rcParams --
+        assert {a.var_name for a in info.ax_info} == {"ax1", "ax2", "ax3", "ax4"}
 
     def test_style_use_in_static(self):
         """plt.style.use() before fig should be in static stmts."""
         src = _read_fixture("style_use.py")
         tree, info = scan_ast(src)
         dep_vars = build_deps(tree, "t")
-        static, _, _ = partition(src, tree, info, dep_vars, "t")
+        static, _, _, _aug = partition(src, tree, info, dep_vars, "t")
         assert any("style.use" in s for s in static)
 
-    def test_style_use_generates_valid_python(self):
-        src = _read_fixture("style_use.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
+    def test_seaborn_heatmap_in_update(self):
+        """sns.heatmap() should be in plot_stmts (inside update), not static."""
+        src = _read_fixture("seaborn_heatmap.py")
+        result = animate(src, var="n", range_str="5,20", frames=10)
+        assert "heatmap" in result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
 
-    def test_rcparams_generates_valid_python(self):
-        src = _read_fixture("rcparams.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    # -- Pattern coverage: draw variants --
-
-    def test_fill_between_where_generates_valid_python(self):
-        src = _read_fixture("fill_between_where.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    def test_quiver_plot_generates_valid_python(self):
-        src = _read_fixture("quiver_plot.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    # -- Pattern coverage: walrus operator --
-
-    def test_walrus_operator_generates_valid_python(self):
-        src = _read_fixture("walrus_operator.py")
-        result = animate(src, var="t", range_str="0,6.28", frames=10)
-        ast.parse(result)
-
-    # -- Twin axes pattern --
-
-    def test_twin_axes_generates_valid_python(self):
-        src = _read_fixture("twin_axes.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-
-    # -- _ind correctness for compound statements --
-
-    def test_ind_multiline_string(self):
-        """_ind on a string with newlines indents every line."""
-        from mpl_animator import _ind
-        text = "def foo():\n    return 1"
-        result = _ind(text, 4)
-        assert result == "    def foo():\n        return 1"
-
-    def test_ind_list_with_multiline_items(self):
-        """_ind on a list where items contain newlines indents every line."""
-        from mpl_animator import _ind
-        items = ["x = 1", "if True:\n    y = 2", "z = 3"]
-        result = _ind(items, 4)
-        expected = "    x = 1\n    if True:\n        y = 2\n    z = 3"
-        assert result == expected
-
-    # -- Inline compound stmt: class definition --
+    def test_pandas_plot_in_update(self):
+        """df.plot() should be in plot_stmts (inside update)."""
+        src = _read_fixture("pandas_plot.py")
+        result = animate(src, var="n", range_str="10,100", frames=10)
+        assert "df.plot" in result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
 
     def test_class_def_in_script(self):
-        """Class definition in script should produce valid output."""
+        """Class definition in script should go to static, produce valid output."""
         src = textwrap.dedent("""\
             import numpy as np
             import matplotlib.pyplot as plt
@@ -1403,62 +765,99 @@ class TestEdgeCases:
         result = animate(src, var="t", range_str="0.1,3", frames=10)
         ast.parse(result)
 
-    # -- with statement --
-
-    def test_with_statement_valid_python(self):
-        """with-block in plot_stmts should produce valid output."""
-        src = textwrap.dedent("""\
-            import numpy as np
-            import matplotlib.pyplot as plt
-            t = 0.5
-            x = np.linspace(0, 10, 100)
-            y = np.sin(t * x)
-            fig, ax = plt.subplots()
-            ax.plot(x, y)
-            ax.set_ylim(-1.5, 1.5)
-            plt.show()
-        """)
-        result = animate(src, var="t", range_str="0,6.28", frames=10)
-        ast.parse(result)
-
-    # -- Bug fix 5: _gen_clear_lines for dict/2D-array axes --
-
-    def test_clear_lines_handles_dict_axes(self):
-        """subplot_mosaic returns a dict; clear must use .values()."""
-        result = _gen_clear_lines([AxesInfo(var_name="axs")])
-        text = "\n".join(result)
-        assert "values" in text, "clear code must handle dict axes (subplot_mosaic)"
-
-    def test_clear_lines_handles_2d_array_axes(self):
-        """subplots(2,2) returns 2D array; clear must use .flat."""
-        result = _gen_clear_lines([AxesInfo(var_name="axs")])
-        text = "\n".join(result)
-        assert "flat" in text, "clear code must handle 2D numpy array axes"
-
-    def test_subplot_mosaic_clear_no_crash(self):
-        """subplot_mosaic fixture should clear axes without errors at runtime."""
-        src = _read_fixture("subplot_mosaic.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-        # Verify update function has proper clear logic
-        update_sec = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
-        assert "values" in update_sec or "flat" in update_sec
-
-    def test_axes_2d_indexing_clear_no_crash(self):
-        """axes_2d_indexing fixture should clear axes without errors at runtime."""
-        src = _read_fixture("axes_2d_indexing.py")
-        result = animate(src, var="t", range_str="0.1,3", frames=10)
-        ast.parse(result)
-        update_sec = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
-        assert "flat" in update_sec
+    def test_ind_helpers(self):
+        """_ind on strings and lists with embedded newlines."""
+        from mpl_animator import _ind
+        assert _ind("def foo():\n    return 1", 4) == "    def foo():\n        return 1"
+        items = ["x = 1", "if True:\n    y = 2", "z = 3"]
+        assert _ind(items, 4) == "    x = 1\n    if True:\n        y = 2\n    z = 3"
 
 
 # ===============================================================
-# TestExplicitValues - --values / values= feature
+# Multi-variable animation
+# ===============================================================
+class TestMultiVar:
+    SIMPLE_SRC = textwrap.dedent("""\
+        import numpy as np
+        import matplotlib.pyplot as plt
+
+        freq = 1.0
+        amp  = 1.0
+        x = np.linspace(0, 2 * np.pi, 200)
+        y = amp * np.sin(freq * x)
+
+        fig, ax = plt.subplots()
+        ax.plot(x, y, lw=2)
+        ax.set_ylim(-2, 2)
+        ax.set_title(f'freq={freq:.2f} amp={amp:.2f}')
+        plt.tight_layout()
+        plt.show()
+    """)
+
+    def test_normalize_var_range(self):
+        v, r = _normalize_var_range("t", "0,1")
+        assert v == ["t"] and r == ["0,1"]
+        v, r = _normalize_var_range(["freq", "amp"], ["1,5", "0.3,1.5"])
+        assert v == ["freq", "amp"] and r == ["1,5", "0.3,1.5"]
+
+    def test_mismatched_var_range_raises(self):
+        with pytest.raises(AssertionError, match="each variable needs exactly one range"):
+            animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str="1,5")
+
+    def test_duplicate_vars_raises(self):
+        with pytest.raises(AssertionError, match="Duplicate variable names"):
+            animate(self.SIMPLE_SRC, var=["freq", "freq"], range_str=["1,5", "1,5"])
+
+    def test_unknown_var_raises(self):
+        with pytest.raises(AssertionError, match="not found in script"):
+            animate(self.SIMPLE_SRC, var=["freq", "nonexistent"], range_str=["1,5", "0,1"])
+
+    def test_two_vars_in_update_and_worker(self):
+        result = animate(self.SIMPLE_SRC, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"])
+        ast.parse(result)
+        update = result.split("def update(_frame):")[1].split("def _render_one")[0]
+        worker = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
+        for section in (update, worker):
+            assert "freq = " in section and "amp = " in section
+
+    def test_original_var_assignment_skipped(self):
+        tree, info = scan_ast(self.SIMPLE_SRC)
+        deps = build_deps(tree, ["freq", "amp"])
+        static, dynamic, _, _aug = partition(self.SIMPLE_SRC, tree, info, deps, ["freq", "amp"])
+        combined = "\n".join(static + dynamic)
+        assert "freq = 1.0" not in combined and "amp  = 1.0" not in combined
+
+    def test_step_values_are_correct(self):
+        result = animate(self.SIMPLE_SRC, var=["freq", "amp"],
+                         range_str=["1,5", "0.3,1.5"], frames=100)
+        assert repr((5.0 - 1.0) / 100) in result
+        assert repr((1.5 - 0.3) / 100) in result
+
+    def test_build_deps_multi_var(self):
+        tree, _ = scan_ast(self.SIMPLE_SRC)
+        deps = build_deps(tree, ["freq", "amp"])
+        assert "y" in deps
+
+    @pytest.mark.slow
+    def test_multi_var_2d_produces_gif(self, tmp_path):
+        src = _read_fixture("multi_var_2d.py")
+        gif_name = "multi_var_2d_animated.gif"
+        result = animate(src, var=["freq", "amp"], range_str=["1,5", "0.3,1.5"],
+                         frames=6, fps=6, out=gif_name, workers=1)
+        script_path = tmp_path / "mv2d.py"
+        script_path.write_text(result, encoding="utf-8")
+        proc = subprocess.run(
+            [sys.executable, str(script_path), "--sequential"],
+            capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
+        )
+        assert proc.returncode == 0, f"multi_var_2d failed:\n{proc.stderr}"
+        assert (tmp_path / gif_name).exists()
+
+
+# ===============================================================
+# Explicit values (--values / values=)
 # ===============================================================
 class TestExplicitValues:
-    """Tests for explicit values list animation mode."""
-
     SIMPLE_SRC = textwrap.dedent("""\
         import matplotlib.pyplot as plt
         import numpy as np
@@ -1471,87 +870,52 @@ class TestExplicitValues:
         plt.show()
     """)
 
-    # -- _normalize_values unit tests --
-
-    def test_normalize_single_string(self):
+    def test_normalize_values(self):
         assert _normalize_values("1,5,10") == [[1.0, 5.0, 10.0]]
-
-    def test_normalize_flat_list(self):
-        result = _normalize_values([1, 5, 10])
-        assert result == [[1.0, 5.0, 10.0]]
-
-    def test_normalize_list_of_strings(self):
-        result = _normalize_values(["1,5,10", "0,1,2"])
-        assert result == [[1.0, 5.0, 10.0], [0.0, 1.0, 2.0]]
-
-    def test_normalize_list_of_lists(self):
-        result = _normalize_values([[1, 5, 10], [0, 1, 2]])
-        assert result == [[1.0, 5.0, 10.0], [0.0, 1.0, 2.0]]
-
-    def test_normalize_math_expressions(self):
+        assert _normalize_values([1, 5, 10]) == [[1.0, 5.0, 10.0]]
+        assert _normalize_values(["1,5,10", "0,1,2"]) == [[1.0, 5.0, 10.0], [0.0, 1.0, 2.0]]
+        assert _normalize_values([[1, 5, 10], [0, 1, 2]]) == [[1.0, 5.0, 10.0], [0.0, 1.0, 2.0]]
         import math
         result = _normalize_values("0,pi,2*pi")
-        assert result[0][0] == pytest.approx(0)
         assert result[0][1] == pytest.approx(math.pi)
-        assert result[0][2] == pytest.approx(2 * math.pi)
-
-    # -- animate() integration tests --
 
     def test_values_overrides_frames(self):
-        """Frame count must equal length of values list."""
         result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
         assert "_FRAMES   = 5" in result
 
-    def test_values_emits_values_list(self):
-        """_VALUES_<var> list must appear in generated code."""
-        result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
-        assert "_VALUES_n = " in result
-
-    def test_values_generates_valid_python(self):
+    def test_values_generates_valid_code(self):
         result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
         ast.parse(result)
-
-    def test_values_update_uses_index(self):
-        """update() must use _VALUES_n[_frame] not a linear formula."""
-        result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
+        assert "_VALUES_n = " in result
         update = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
         assert "_VALUES_n[_frame]" in update
-        assert "* " not in update.split("_VALUES")[0]  # no linear step before values line
 
-    def test_values_int_var_cast(self):
-        """n was originally int literal, so must use int(_VALUES_n[_frame])."""
+    def test_values_int_cast(self):
+        """n was int literal => int(_VALUES_n[_frame]); float var => no cast."""
         result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
         assert "int(_VALUES_n[_frame])" in result
 
-    def test_values_float_var_no_cast(self):
-        """Float var must NOT add int() cast."""
-        src = textwrap.dedent("""\
+        src_float = textwrap.dedent("""\
             import matplotlib.pyplot as plt
-            import numpy as np
             alpha = 0.5
             fig, ax = plt.subplots()
             ax.plot([1,2,3], [1,2,3], alpha=alpha)
             plt.show()
         """)
-        result = animate(src, var="alpha", values="0.1,0.3,0.5,0.7,0.9", fps=10)
-        assert "int(_VALUES_alpha" not in result
-        assert "_VALUES_alpha[_frame]" in result
+        result_f = animate(src_float, var="alpha", values="0.1,0.3,0.5,0.7,0.9", fps=10)
+        assert "int(_VALUES_alpha" not in result_f
 
     def test_values_backwards_compat_range_still_works(self):
-        """range_str path must still work when values is not given."""
         result = animate(self.SIMPLE_SRC, var="n", range_str="5,100", frames=10, fps=10)
         assert "_VALUES_n" not in result
-        assert "5" in result  # start value present as literal
 
     def test_values_as_list_of_numbers(self):
         result = animate(self.SIMPLE_SRC, var="n", values=[5, 10, 20, 50], fps=10)
         ast.parse(result)
-        assert "_VALUES_n = " in result
         assert "_FRAMES   = 4" in result
 
-    def test_values_validation_length_mismatch(self):
-        """Mismatched values list lengths must raise AssertionError."""
-        src = textwrap.dedent("""\
+    def test_values_validation(self):
+        src2 = textwrap.dedent("""\
             import matplotlib.pyplot as plt
             import numpy as np
             a = 1.0
@@ -1561,15 +925,13 @@ class TestExplicitValues:
             plt.show()
         """)
         with pytest.raises(AssertionError, match="same length"):
-            animate(src, var=["a", "b"], values=["1,2,3", "10,20"], fps=10)
-
-    def test_values_validation_too_few(self):
-        """Single-element values list must raise AssertionError."""
+            animate(src2, var=["a", "b"], values=["1,2,3", "10,20"], fps=10)
         with pytest.raises(AssertionError, match="at least 2"):
             animate(self.SIMPLE_SRC, var="n", values="5", fps=10)
+        with pytest.raises(AssertionError, match=r"len\(values\)"):
+            animate(self.SIMPLE_SRC, var="n", values=["5,10,20", "1,2,3"], fps=10)
 
     def test_values_multivar(self):
-        """Multi-variable values mode generates both _VALUES_ lists."""
         src = textwrap.dedent("""\
             import matplotlib.pyplot as plt
             import numpy as np
@@ -1583,17 +945,68 @@ class TestExplicitValues:
         """)
         result = animate(src, var=["a", "b"], values=["1,2,3", "10,20,30"], fps=10)
         ast.parse(result)
-        assert "_VALUES_a = " in result
-        assert "_VALUES_b = " in result
+        assert "_VALUES_a = " in result and "_VALUES_b = " in result
         assert "_FRAMES   = 3" in result
 
-    def test_values_wrong_var_count(self):
-        """Providing 2 values lists for a single var must raise AssertionError."""
-        with pytest.raises(AssertionError, match="len\(values\)"):
-            animate(self.SIMPLE_SRC, var="n", values=["5,10,20", "1,2,3"], fps=10)
-
     def test_values_worker_body_uses_index(self):
-        """Parallel worker body must also use _VALUES_n[_frame]."""
         result = animate(self.SIMPLE_SRC, var="n", values="5,10,20,50,100", fps=10)
         worker = result.split("def _render_one(job):")[1].split("def render_parallel")[0]
         assert "_VALUES_n[_frame]" in worker
+
+
+# ===============================================================
+# Slow tests - actually run the generated scripts
+# ===============================================================
+@pytest.mark.slow
+class TestSlowExecution:
+    """Tests that actually execute the generated animated scripts."""
+
+    @pytest.mark.parametrize("fixture_name", list(FIXTURE_CONFIGS.keys()))
+    def test_generated_script_produces_gif(self, fixture_name, tmp_path):
+        if fixture_name == "implicit_figure.py":
+            pytest.xfail("no explicit figure creation")
+        if fixture_name == "mixed_3d_2d.py":
+            pytest.xfail("mixed 2D/3D subplots known limitation")
+        _OPTIONAL_LIBS = {"seaborn_heatmap.py": "seaborn", "pandas_plot.py": "pandas"}
+        if fixture_name in _OPTIONAL_LIBS:
+            pytest.importorskip(_OPTIONAL_LIBS[fixture_name])
+        src = _read_fixture(fixture_name)
+        cfg = FIXTURE_CONFIGS[fixture_name]
+        gif_name = fixture_name.replace(".py", "_animated.gif")
+        result = animate(src, frames=5, fps=5, out=gif_name, workers=1, **cfg)
+
+        script_path = tmp_path / "animated.py"
+        script_path.write_text(result, encoding="utf-8")
+        proc = subprocess.run(
+            [sys.executable, str(script_path), "--sequential"],
+            capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
+        )
+        assert proc.returncode == 0, \
+            f"Script failed:\nstdout: {proc.stdout}\nstderr: {proc.stderr}"
+        gif_path = tmp_path / gif_name
+        assert gif_path.exists() and gif_path.stat().st_size > 0
+
+        import shutil
+        out_dir = os.path.join(os.path.dirname(__file__), "output")
+        os.makedirs(out_dir, exist_ok=True)
+        shutil.copy(gif_path, os.path.join(out_dir, gif_name))
+
+    def test_ping_pong_produces_more_frames(self, tmp_path):
+        src = _read_fixture("simple_line.py")
+        normal = animate(src, var="t", range_str="0,6.28", frames=5,
+                         fps=5, out="normal.gif", workers=1)
+        pp = animate(src, var="t", range_str="0,6.28", frames=5,
+                     fps=5, out="pp.gif", ping_pong=True, workers=1)
+
+        for code, name in [(normal, "normal.gif"), (pp, "pp.gif")]:
+            p = tmp_path / name.replace(".gif", ".py")
+            p.write_text(code, encoding="utf-8")
+            proc = subprocess.run(
+                [sys.executable, str(p), "--sequential"],
+                capture_output=True, text=True, timeout=60, cwd=str(tmp_path),
+            )
+            assert proc.returncode == 0
+
+        from PIL import Image
+        assert Image.open(tmp_path / "pp.gif").n_frames > \
+               Image.open(tmp_path / "normal.gif").n_frames

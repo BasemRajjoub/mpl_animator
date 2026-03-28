@@ -16,9 +16,13 @@ Turn any static matplotlib script into an animated GIF or MP4 by sweeping a vari
 - **Axis rotation** - animate `azim` with `ax.view_init` to rotate 3D plots; animate `angle` with `ax.set_theta_offset` to spin polar plots
 - **Math expressions in ranges** - `--range "0,2*pi"` just works
 - **2D, 3D, and polar plots** - handles `plot_surface`, `scatter3D`, subplots, polar axes, and more
+- **Seaborn & pandas support** - recognizes `sns.heatmap`, `sns.lineplot`, `df.plot()`, `pd.plotting.scatter_matrix()`, and 30+ other third-party draw calls out of the box
+- **Augmented assignment safety** - scripts using `y += ...`, `x -= ...`, etc. inside animated sections are automatically handled with proper `global` declarations (no `UnboundLocalError`)
+- **Graceful frame errors** - if a frame crashes (e.g. animated value hits an invalid domain), that frame is skipped with a warning instead of aborting the entire render
+- **Cross-platform & portable** - works on Windows, macOS, and Linux; uses `repr()` for file paths, UTF-8 encoding throughout, and `os.makedirs` for output directories
 - **Single-file, standalone** - `mpl_animator.py` can be dropped into any project with no install required; only depends on `matplotlib`, `numpy`, and `Pillow` (no exotic dependencies)
 - **Library API** - importable as a Python module for use in notebooks or pipelines
-- **Extensively tested** - validated against all 510 official matplotlib gallery examples; 652 automated tests total
+- **Extensively tested** - validated against all 510 official matplotlib gallery examples; 484 automated tests total
 
 ## Install
 
@@ -187,8 +191,8 @@ The animator identifies that `cx_rot`, `cy_rot`, and the tube surface `xs`/`ys`/
 ## How it works
 
 1. Parses your script's AST to find which variables depend on the animated one
-2. Splits code into **static** (run once) and **dynamic** (recalculated per frame)
-3. Generates a new script with `FuncAnimation` (sequential 2D GIF), PNG+stitch (sequential MP4 or 3D), and `multiprocessing` (parallel) renderers
+2. Splits code into **static** (run once), **dynamic** (recalculated per frame), and **plot** (redrawn per frame)
+3. Generates a new script with sequential (PNG+stitch) and parallel (`multiprocessing`) renderers — each frame is a standalone PNG, stitched into GIF or MP4 at the end
 
 ## Library usage
 
@@ -232,15 +236,22 @@ animated_code = animate(src, var="t", range_str="0,1", ping_pong=True, loop=0)
 The animator has been extensively tested against **all 510 official matplotlib gallery examples**. Of those, 271 are directly animatable (the rest are interactive widgets, event-driven demos, or scripts with no scalar variable to sweep) — and the animator produces valid, runnable Python for every single one.
 
 ```bash
-pytest tests/test_animator.py -v          # unit + integration tests (381 tests)
-pytest tests/test_gallery.py -v           # all matplotlib gallery examples (271 tests)
-pytest tests/ -v                          # everything (652 tests)
+pytest tests/test_animator.py -v          # unit + integration tests (208 tests)
+pytest tests/test_gallery.py -v           # all matplotlib gallery examples (276 tests)
+pytest tests/ -v                          # everything (484 tests)
 pytest tests/ -v -m slow                  # slow tests that generate actual GIFs/MP4s
 ```
 
 **Test coverage:**
-- 381 unit and integration tests covering AST parsing, dependency tracking, code generation, validation, multi-variable animation, 47 hand-crafted edge-case fixtures, and 10 real-world scripts sourced from public repos
-- 271 parametrized tests — one per animatable official matplotlib gallery example, spanning every plot category: line, bar, scatter, histogram, contour, heatmap, 3D surface, 3D wireframe, polar, pie, errorbar, fill_between, quiver, stem, and more
+- 208 unit and integration tests covering AST parsing, dependency tracking, code generation, validation, multi-variable animation, explicit value lists, augmented assignment scoping, seaborn/pandas draw recognition, per-frame error handling, 53 edge-case fixtures, and 10 real-world scripts
+- 276 parametrized tests — one per animatable official matplotlib gallery example, spanning every plot category: line, bar, scatter, histogram, contour, heatmap, 3D surface, 3D wireframe, polar, pie, errorbar, fill_between, quiver, stem, and more
+
+## Known limitations
+
+- **Stateful / accumulating scripts** - scripts that build up results iteratively (e.g. appending to a list across a loop) re-run from scratch each frame, which is correct for pure functional plots but may produce unexpected results for accumulating ones
+- **`if __name__ == "__main__":` guards** - code inside a `__name__` guard is treated as a single block; if the animated variable is assigned inside the guard, the animator may not partition it correctly
+- **Multiprocessing via `exec()`** - when running the generated code via `exec()` rather than as a standalone file, the parallel renderer can't pickle the worker function and falls back to sequential mode automatically
+- **Variable domain safety** - the animator has no awareness of valid domains for the animated variable; sweeping into invalid ranges (e.g. negative values for a count parameter) may cause per-frame errors (which are now skipped gracefully)
 
 ---
 
