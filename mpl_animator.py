@@ -1,7 +1,7 @@
 """
 mpl_animator.py -- convert ANY static matplotlib script to an animation.
 Author: Basem Rajjoub (https://basemrajjoub.com)
-Version: 0.1.8
+Version: 0.1.9
 Uses only matplotlib + multiprocessing + Pillow (GIF) / ffmpeg (MP4).
 
 Usage (CLI):
@@ -153,6 +153,7 @@ class ASTInfo:
     node_has_funcanimation: dict = field(default_factory=dict)
     ax_info: list = field(default_factory=list)
     all_names: set = field(default_factory=set)
+    pyplot_alias: str = "plt"  # detected from `import matplotlib.pyplot as X`
 
 
 def _get_assigned_names(target_node):
@@ -189,10 +190,96 @@ def _extract_subplot_spec(call_node):
     return ", ".join(parts)
 
 
+def _unwrap_main_guard(tree):
+    """Unwrap `if __name__ == '__main__':` blocks into top-level statements."""
+    new_body = []
+    for stmt in tree.body:
+        if (isinstance(stmt, ast.If)
+                and isinstance(stmt.test, ast.Compare)
+                and len(stmt.test.comparators) == 1):
+            left = stmt.test.left
+            comp = stmt.test.comparators[0]
+            if (isinstance(left, ast.Name) and left.id == "__name__"
+                    and isinstance(comp, ast.Constant) and comp.value == "__main__"):
+                new_body.extend(stmt.body)
+                continue
+        new_body.append(stmt)
+    tree.body = new_body
+    return tree
+
+
+def _detect_pyplot_alias(tree):
+    """Detect the alias used for matplotlib.pyplot (default 'plt')."""
+    for stmt in tree.body:
+        if isinstance(stmt, ast.Import):
+            for alias in stmt.names:
+                if alias.name == "matplotlib.pyplot":
+                    return alias.asname or "matplotlib.pyplot"
+        elif isinstance(stmt, ast.ImportFrom):
+            if stmt.module == "matplotlib.pyplot":
+                # from matplotlib.pyplot import * — alias is None
+                for alias in stmt.names:
+                    if alias.name == "*":
+                        return None  # wildcard
+            if stmt.module == "matplotlib" and any(
+                    a.name == "pyplot" for a in stmt.names):
+                a = next(a for a in stmt.names if a.name == "pyplot")
+                return a.asname or "pyplot"
+    return "plt"
+
+
+def _unwrap_style_context(tree, src):
+    """Unwrap `with plt.style.context(...):` into its body statements.
+
+    Preserves the style.context call as a standalone statement followed by
+    the body contents, so draw detection works on the inner statements.
+    """
+    new_body = []
+    for stmt in tree.body:
+        if isinstance(stmt, ast.With) and stmt.items:
+            ctx = stmt.items[0].context_expr
+            is_style_ctx = False
+            if isinstance(ctx, ast.Call) and isinstance(ctx.func, ast.Attribute):
+                if ctx.func.attr == "context":
+                    # Check if it's X.style.context or style.context
+                    val = ctx.func.value
+                    if isinstance(val, ast.Attribute) and val.attr == "style":
+                        is_style_ctx = True
+                    elif isinstance(val, ast.Name) and val.id == "style":
+                        is_style_ctx = True
+            if is_style_ctx:
+                # Keep the style.use() equivalent as a standalone call
+                style_text = ast.get_source_segment(src, ctx) or ""
+                if style_text:
+                    # Extract just the style name arg and make it a style.use()
+                    for arg in ctx.args:
+                        if isinstance(arg, ast.Constant):
+                            alias = _detect_pyplot_alias(tree)
+                            prefix = f"{alias}." if alias else ""
+                            use_stmt = ast.parse(
+                                f"{prefix}style.use({arg.value!r})"
+                            ).body[0]
+                            new_body.append(use_stmt)
+                            break
+                new_body.extend(stmt.body)
+                continue
+        new_body.append(stmt)
+    tree.body = new_body
+    return tree
+
+
 def scan_ast(src):
     """Phase 1: Parse source and extract structural information."""
     tree = ast.parse(src)
+
+    # Pre-processing: unwrap __main__ guard and style.context blocks
+    tree = _unwrap_main_guard(tree)
+    tree = _unwrap_style_context(tree, src)
+
     info = ASTInfo()
+
+    # Detect pyplot alias
+    info.pyplot_alias = _detect_pyplot_alias(tree)
 
     info.all_names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
 
@@ -419,9 +506,10 @@ def partition(src, tree, info, dep_vars, var):
 
 
 # -- Axes clearing code generation --
-def _gen_clear_lines(ax_info_list):
+def _gen_clear_lines(ax_info_list, pyplot_alias="plt"):
+    _plt = pyplot_alias or "plt"
     if not ax_info_list:
-        return ["plt.gca().clear()"]
+        return [f"{_plt}.gca().clear()"]
 
     out = []
     for ax in ax_info_list:
@@ -434,15 +522,22 @@ def _gen_clear_lines(ax_info_list):
                 "[_a.clear() for _a in _axs]",
             ]
 
-    return out if out else ["plt.gca().clear()"]
+    return out if out else [f"{_plt}.gca().clear()"]
 
 
 # -- Agg backend injection --
-def _inject_agg(static_stmts):
+def _inject_agg(static_stmts, has_wildcard_import=False):
     result = []
     agg_done = False
     for stmt in static_stmts:
         if "matplotlib.use" in stmt:
+            continue
+        # Rewrite wildcard import to avoid issues inside worker function bodies
+        if has_wildcard_import and "from matplotlib.pyplot import *" in stmt:
+            result.append("import matplotlib.pyplot as plt")
+            if not agg_done:
+                result.insert(len(result) - 1, "import matplotlib; matplotlib.use('Agg')")
+                agg_done = True
             continue
         if not agg_done and ("import matplotlib" in stmt or "pyplot" in stmt):
             result.append("import matplotlib; matplotlib.use('Agg')")
@@ -468,7 +563,7 @@ def _ind(lst, n=4):
 
 # -- Code generation template --
 TEMPLATE = '''\
-"""Auto-generated by mpl-animator v0.1.8 from <<<SOURCE>>>
+"""Auto-generated by mpl-animator v0.1.9 from <<<SOURCE>>>
    <<<VAR_SUMMARY>>> over <<<FRAMES>>> frames @ <<<FPS>>>fps
 """
 <<<STATIC>>>
@@ -541,7 +636,7 @@ def render_sequential():
                 paths.append(_path)
             except Exception as _e:
                 _skipped += 1
-                print(f"\\n  WARNING: frame {idx} failed: {_e}")
+                print(f"\\n  WARNING: frame {idx} (_frame={_i}) failed: {_e}")
                 plt.close("all")
         if not _HAS_3D:
             plt.close("all")
@@ -808,10 +903,19 @@ def animate(src, var="t", range_str="0,1", frames=120, fps=25,
     )
 
     # -- Phase 4: Axes clearing --
-    clear = _gen_clear_lines(info.ax_info)
+    _plt = info.pyplot_alias or "plt"
+    clear = _gen_clear_lines(info.ax_info, pyplot_alias=_plt)
 
     # -- Phase 5: Agg injection --
-    final_static = _inject_agg(static_stmts)
+    has_wildcard = info.pyplot_alias is None
+    final_static = _inject_agg(static_stmts, has_wildcard_import=has_wildcard)
+
+    # If the user used a non-standard alias (MPL, mpl, etc.) or wildcard,
+    # ensure `plt` is available for the template's plt.savefig/plt.close calls.
+    if _plt != "plt":
+        _has_plt_import = any("as plt" in s for s in final_static)
+        if not _has_plt_import:
+            final_static.append("import matplotlib.pyplot as plt")
 
     # -- Phase 6: Build sections --
     static_block = "\n".join(final_static)

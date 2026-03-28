@@ -828,6 +828,77 @@ class TestEdgeCases:
         acf_idx = next(i for i, l in enumerate(lines) if "my_acf(ts" in l)
         assert acf_idx > clear_idx, "axes-using dynamic stmt must be after clear"
 
+    def test_non_standard_pyplot_alias(self):
+        """import matplotlib.pyplot as MPL must still produce valid code."""
+        src = textwrap.dedent("""\
+            import matplotlib.pyplot as MPL
+            import numpy as np
+            t = 1.0
+            x = np.linspace(0, 10, 100)
+            y = np.sin(t * x)
+            fig, ax = MPL.subplots()
+            ax.plot(x, y)
+            MPL.show()
+        """)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+        assert "import matplotlib.pyplot as plt" in result
+
+    def test_main_guard_unwrapped(self):
+        """Code inside if __name__ == '__main__': must be analyzed for draw calls."""
+        src = textwrap.dedent("""\
+            import matplotlib.pyplot as plt
+            import numpy as np
+            if __name__ == '__main__':
+                t = 1.0
+                x = np.linspace(0, 10, 100)
+                y = np.sin(t * x)
+                fig, ax = plt.subplots()
+                ax.plot(x, y)
+                plt.show()
+        """)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+        body = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
+        assert "ax.plot" in body
+
+    def test_wildcard_import_rewritten(self):
+        """from matplotlib.pyplot import * must be rewritten to avoid worker crash."""
+        src = textwrap.dedent("""\
+            from matplotlib.pyplot import *
+            import numpy as np
+            t = 1.0
+            x = np.linspace(0, 10, 100)
+            y = np.sin(t * x)
+            fig, ax = subplots()
+            ax.plot(x, y)
+            show()
+        """)
+        result = animate(src, var="t", range_str="0.5,5", frames=5)
+        ast.parse(result)
+        assert "from matplotlib.pyplot import *" not in result
+        assert "import matplotlib.pyplot as plt" in result
+
+    def test_style_context_unwrapped(self):
+        """with plt.style.context(...) must be unwrapped for draw detection."""
+        src = textwrap.dedent("""\
+            import numpy as np
+            import matplotlib.pyplot as plt
+            freq = 5.0
+            t = np.linspace(0, 1, 500)
+            signal = np.sin(2 * np.pi * freq * t)
+            with plt.style.context('ggplot'):
+                fig, ax = plt.subplots()
+                ax.plot(t, signal)
+                ax.set_title(f'freq={freq}')
+                plt.show()
+        """)
+        result = animate(src, var="freq", range_str="1,20", frames=5)
+        ast.parse(result)
+        body = result.split("def update(_frame):")[1].split("def _stitch_gif")[0]
+        assert "ax.plot" in body
+        assert "signal" in body
+
 
 # ===============================================================
 # Multi-variable animation
