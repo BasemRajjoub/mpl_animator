@@ -87,7 +87,10 @@ python wave_static_animated.py --sequential # single-threaded fallback
 `wave_static.py` plots a signal and its frequency spectrum for a fixed frequency `f`:
 
 ```python
-# wave_static.py  (key lines)
+# wave_static.py
+import numpy as np
+import matplotlib.pyplot as plt
+
 f   = 10.0                          # <- variable to animate
 t   = np.linspace(0, 1, 1000)
 y   = np.sin(2*np.pi*f*t) + 0.4*np.sin(2*np.pi*2*f*t)
@@ -97,7 +100,10 @@ spectrum = np.abs(np.fft.rfft(y))
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6))
 ax1.plot(t, y, 'royalblue', lw=1.5)
+ax1.set_title(f"Signal  f = {f:.1f} Hz")
 ax2.plot(freqs, spectrum, 'tomato', lw=1.5)
+ax2.set_title("Frequency Spectrum")
+plt.tight_layout()
 plt.show()
 ```
 
@@ -119,20 +125,28 @@ The animator detects that `y`, `spectrum` depend on `f`, moves them into the per
 `lissajous_3d_static.py` draws a 3D Lissajous figure for fixed frequency ratio `a`:
 
 ```python
-# lissajous_3d_static.py  (key lines)
+# lissajous_3d_static.py
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
 a  = 3.0          # <- variable to animate
 b  = 2.0
 c  = 1.0
+delta = np.pi / 4
 
 t = np.linspace(0, 2 * np.pi, 1000)
 x = np.sin(a * t + delta)
 y = np.sin(b * t)
 z = np.sin(c * t)
 
+colors = plt.cm.plasma(np.linspace(0, 1, len(t)))
+
 fig = plt.figure(figsize=(8, 6))
 ax  = fig.add_subplot(111, projection='3d')
 ax.scatter(x, y, z, c=colors, s=2, alpha=0.8)
 ax.set_title(f"3D Lissajous  a={a:.1f}, b={b:.1f}, c={c:.1f}")
+plt.tight_layout()
 plt.show()
 ```
 
@@ -156,19 +170,48 @@ For 3D plots the animator calls `fig.clear()` and recreates the axes each frame 
 `orbit_static.py` draws a torus knot for fixed camera position and object rotation:
 
 ```python
-# orbit_static.py  (key lines)
-azim = 45.0          # camera azimuth in degrees      <- animated
-spin = 0.0           # object self-rotation (radians) <- animated
-elev = 20.0          # camera elevation in degrees    <- animated
+# orbit_static.py
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
 
-# Object geometry: rotate the knot around its own Z axis
+azim = 45.0   # camera azimuth in degrees      <- animated
+spin = 0.0    # object self-rotation (radians) <- animated
+elev = 20.0   # camera elevation in degrees    <- animated
+
+p, q = 2, 3
+N    = 300
+phi  = np.linspace(0, 2 * np.pi, N)
+R, r_tube = 1.0, 0.25
+tube_u    = np.linspace(0, 2 * np.pi, 20)
+
+cx = (R + r_tube * np.cos(q * phi)) * np.cos(p * phi)
+cy = (R + r_tube * np.cos(q * phi)) * np.sin(p * phi)
+cz = r_tube * np.sin(q * phi)
+
 cx_rot = cx * np.cos(spin) - cy * np.sin(spin)
 cy_rot = cx * np.sin(spin) + cy * np.cos(spin)
+cz_rot = cz
+
+dx = np.gradient(cx_rot); dy = np.gradient(cy_rot); dz = np.gradient(cz_rot)
+tang_len = np.sqrt(dx**2 + dy**2 + dz**2) + 1e-12
+tx, ty, tz = dx / tang_len, dy / tang_len, dz / tang_len
+ux = ty * 0 - tz * 1; uy = tz * 0 - tx * 0; uz = tx * 1 - ty * 0
+n_len = np.sqrt(ux**2 + uy**2 + uz**2) + 1e-12
+nx, ny, nz = ux / n_len, uy / n_len, uz / n_len
+bx = ty * nz - tz * ny; by = tz * nx - tx * nz; bz = tx * ny - ty * nx
+
+tube_r = 0.12
+xs = cx_rot[:, None] + tube_r * (nx[:, None] * np.cos(tube_u) + bx[:, None] * np.sin(tube_u))
+ys = cy_rot[:, None] + tube_r * (ny[:, None] * np.cos(tube_u) + by[:, None] * np.sin(tube_u))
+zs = cz_rot[:, None] + tube_r * (nz[:, None] * np.cos(tube_u) + bz[:, None] * np.sin(tube_u))
 
 fig = plt.figure(figsize=(7, 7))
 ax  = fig.add_subplot(111, projection='3d')
-ax.plot_surface(xs, ys, zs, cmap='plasma', alpha=0.92)
-ax.view_init(elev=elev, azim=azim)   # <- camera controlled by both azim and elev
+ax.plot_surface(xs, ys, zs, cmap='plasma', alpha=0.92, linewidth=0)
+ax.view_init(elev=elev, azim=azim)
+ax.set_title(f'azim={azim:.0f}°  elev={elev:.0f}°  spin={np.degrees(spin):.0f}°')
+plt.tight_layout()
 plt.show()
 ```
 
