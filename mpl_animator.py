@@ -1152,6 +1152,8 @@ def main():
     p.add_argument("--loop",           default=0,      type=int, help="GIF loop count (0=forever, default: 0)")
     p.add_argument("--reverse",        action="store_true", help="Sweep range end->start")
     p.add_argument("--ping-pong",      action="store_true", help="Play forward then backward")
+    p.add_argument("--save-script",    action="store_true",
+                   help="Also save the generated animated .py script (default: not saved)")
     args = p.parse_args()
 
     try:
@@ -1188,18 +1190,35 @@ def main():
     except (AssertionError, ValueError) as exc:
         p.error(str(exc))
 
-    out_script = Path(args.script).stem + "_animated.py"
-    Path(out_script).write_text(result, encoding="utf-8")
+    import subprocess
+    import sys
+    import tempfile
+    import os
+
+    if args.save_script:
+        out_script = Path(args.script).stem + "_animated.py"
+        Path(out_script).write_text(result, encoding="utf-8")
+        print(f"Script   -> {out_script}")
+
+    if args.out:
+        out_file = args.out
+    else:
+        out_file = Path(args.script).stem + f"_animated.{args.format}"
+
     var_display = ", ".join(args.var)
-    print(f"Written  -> {out_script}")
-    print(f"   Variables: {var_display}")
-    if args.values:
-        print(f"   Values   : {', '.join(args.values)} (explicit)")
-    print(f"   Format   : {args.format}{' (ping-pong)' if args.ping_pong else ''}{' (reversed)' if args.reverse else ''}")
-    print(f"   Loop     : {'forever' if args.loop == 0 else args.loop}")
-    print(f"   Workers  : {args.workers or 'auto (cpu_count)'}")
-    print(f"   Run      : python {out_script}")
-    print(f"   Seq only : python {out_script} --sequential")
+    print(f"Rendering -> {out_file}  (vars: {var_display})")
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False,
+                                     encoding="utf-8") as _f:
+        _f.write(result)
+        _tmp = _f.name
+
+    try:
+        subprocess.run([sys.executable, _tmp], check=True)
+    finally:
+        os.unlink(_tmp)
+
+    print(f"Done      -> {out_file}")
 
 
 if __name__ == "__main__":

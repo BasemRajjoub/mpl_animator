@@ -1,28 +1,6 @@
 # mpl-animator
 
-Turn any static matplotlib script into an animated GIF or MP4 by sweeping a variable - no rewriting required.
-
-## Features
-
-- **Zero boilerplate** - point it at an existing script, it figures out the rest
-- **Multi-variable animation** - sweep multiple variables simultaneously with `--var azim spin elev --range "0,360" "0,6.28" "20,40"`; all variables share the same frame clock, each advances independently
-- **Explicit value lists** - animate over any discrete set of values with `--values "1,5,10,50,100"` instead of a linear range; frame count is inferred automatically
-- **AST-based dependency tracking** - automatically identifies which variables and calculations need to update each frame, across all animated variables
-- **Parallel rendering** - renders frames across all CPU cores via `multiprocessing`, falls back to sequential automatically
-- **GIF and MP4 output** - export as animated GIF (Pillow) or MP4 (ffmpeg); just add `--format mp4`
-- **Loop control** - `--loop 0` (forever, default), `--loop 1` (play once), `--loop N`
-- **Ping-pong** - `--ping-pong` plays forward then reversed for seamless looping GIFs
-- **Reverse** - `--reverse` sweeps each range end → start
-- **Axis rotation** - animate `azim` with `ax.view_init` to rotate 3D plots; animate `angle` with `ax.set_theta_offset` to spin polar plots
-- **Math expressions in ranges** - `--range "0,2*pi"` just works
-- **2D, 3D, and polar plots** - handles `plot_surface`, `scatter3D`, subplots, polar axes, and more
-- **Seaborn & pandas support** - recognizes `sns.heatmap`, `sns.lineplot`, `df.plot()`, `pd.plotting.scatter_matrix()`, and 30+ other third-party draw calls out of the box
-- **Augmented assignment safety** - scripts using `y += ...`, `x -= ...`, etc. inside animated sections are automatically handled with proper `global` declarations (no `UnboundLocalError`)
-- **Graceful frame errors** - if a frame crashes (e.g. animated value hits an invalid domain), that frame is skipped with a warning instead of aborting the entire render
-- **Cross-platform & portable** - works on Windows, macOS, and Linux; uses `repr()` for file paths, UTF-8 encoding throughout, and `os.makedirs` for output directories
-- **Single-file, standalone** - `mpl_animator.py` can be dropped into any project with no install required; only depends on `matplotlib`, `numpy`, and `Pillow` (no exotic dependencies)
-- **Library API** - importable as a Python module for use in notebooks or pipelines
-- **Extensively tested** - validated against all 510 official matplotlib gallery examples; 484 automated tests total
+Turn any static matplotlib script into an animated GIF or MP4 by sweeping a variable — no rewriting required.
 
 ## Install
 
@@ -30,274 +8,144 @@ Turn any static matplotlib script into an animated GIF or MP4 by sweeping a vari
 pip install mpl-animator
 ```
 
-Or just copy the file - no install needed:
-
-```bash
-# copy mpl_animator.py into your project, then use it directly
-python mpl_animator.py my_plot.py --var t --range "0,1"
-```
+Or just drop `mpl_animator.py` into your project and use it directly.
 
 ## Usage
 
-If installed via pip, use the `mpl-animator` command. If using the file directly, replace `mpl-animator` with `python mpl_animator.py` - everything else is identical.
-
 ```bash
-# Basic: animate variable `f` from 3 to 60 (outputs GIF by default)
+# Sweeps f from 3→60, writes wave_static_animated.gif
 mpl-animator wave_static.py --var f --range "3,60"
 
-# Export as MP4 instead of GIF (requires ffmpeg)
+# MP4 instead (requires ffmpeg)
 mpl-animator plot.py --var t --range "0,2*pi" --format mp4
 
-# Math expressions in range, custom frame count and FPS
-mpl-animator plot.py --var t --range "0,2*pi" --frames 60 --fps 30
+# Multiple variables at once
+mpl-animator orbit.py --var azim spin elev --range "0,360" "0,6.28" "20,40" --ping-pong
 
-# Rotate a 3D plot by animating the camera azimuth
-mpl-animator my_3d_plot.py --var azim --range "0,360" --frames 72 --fps 20
-
-# Multi-variable: camera orbits (azim) while the object spins (spin) and camera rises (elev)
-mpl-animator orbit_static.py --var azim spin elev --range "0,360" "0,6.28" "20,40" --frames 90 --fps 25 --ping-pong
-
-# Ping-pong loop (plays forward then reversed — great for seamless GIFs)
-mpl-animator plot.py --var t --range "0,1" --frames 60 --ping-pong
-
-# Control output quality and parallelism
-mpl-animator plot.py --var alpha --range "0,1" --dpi 150 --workers 8
-
-# Custom output filename
-mpl-animator plot.py --var t --range "0,1" --out my_animation.gif
-
-# Explicit values: animate over specific discrete values (frame count = len(values))
+# Discrete values instead of a range
 mpl-animator plot.py --var n --values "5,10,50,200,1000"
 
-# Multi-variable explicit values: one comma-separated list per variable
-mpl-animator plot.py --var a b --values "1,2,5,10" "0.1,0.5,1.0,2.0"
+# Save the generated .py script too (useful for --sequential re-runs)
+mpl-animator plot.py --var t --range "0,1" --save-script
 ```
 
-This generates a `<script>_animated.py` file. Run it to produce the output:
+The GIF lands in your current directory as `<script>_animated.gif`. Pass `--out` for a custom path.
 
-```bash
-python wave_static_animated.py              # parallel (default)
-python wave_static_animated.py --sequential # single-threaded fallback
-```
+## What it does
+
+1. Parses your script's AST to find everything that depends on the animated variable
+2. Splits code into static (runs once) and dynamic (recalculated per frame)
+3. Renders frames in parallel across all CPU cores, then stitches to GIF or MP4
+
+No annotations. No rewriting. Point and shoot.
 
 ## Examples
 
-### Example 1 - Wave & spectrum (2D)
-
-`wave_static.py` plots a signal and its frequency spectrum for a fixed frequency `f`:
+### Wave & spectrum
 
 ```python
 # wave_static.py
 import numpy as np
 import matplotlib.pyplot as plt
 
-f   = 10.0                          # <- variable to animate
+f   = 10.0                          # <- animate this
 t   = np.linspace(0, 1, 1000)
 y   = np.sin(2*np.pi*f*t) + 0.4*np.sin(2*np.pi*2*f*t)
-
 freqs    = np.fft.rfftfreq(len(t), d=t[1]-t[0])
 spectrum = np.abs(np.fft.rfft(y))
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 6))
-ax1.plot(t, y, 'royalblue', lw=1.5)
-ax1.set_title(f"Signal  f = {f:.1f} Hz")
-ax2.plot(freqs, spectrum, 'tomato', lw=1.5)
-ax2.set_title("Frequency Spectrum")
-plt.tight_layout()
-plt.show()
+ax1.plot(t, y, 'royalblue', lw=1.5);  ax1.set_title(f"Signal  f = {f:.1f} Hz")
+ax2.plot(freqs, spectrum, 'tomato', lw=1.5);  ax2.set_title("Frequency Spectrum")
+plt.tight_layout(); plt.show()
 ```
-
-Animate `f` from 3 Hz to 60 Hz:
 
 ```bash
-python mpl_animator.py examples/wave_static.py --var f --range "3,60" --frames 60 --fps 20
-python wave_static_animated.py
+mpl-animator examples/wave_static.py --var f --range "3,60" --frames 60 --fps 20
 ```
-
-The animator detects that `y`, `spectrum` depend on `f`, moves them into the per-frame `update()`, and keeps the figure/axes creation static - so only the data redraws each frame.
 
 ![wave animation](https://raw.githubusercontent.com/BasemRajjoub/mpl_animator/main/examples/wave_static_animated.gif)
 
 ---
 
-### Example 2 - 3D Lissajous curve
+### 3D Lissajous
 
-`lissajous_3d_static.py` draws a 3D Lissajous figure for fixed frequency ratio `a`:
-
-```python
-# lissajous_3d_static.py
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
-a  = 3.0          # <- variable to animate
-b  = 2.0
-c  = 1.0
-delta = np.pi / 4
-
-t = np.linspace(0, 2 * np.pi, 1000)
-x = np.sin(a * t + delta)
-y = np.sin(b * t)
-z = np.sin(c * t)
-
-colors = plt.cm.plasma(np.linspace(0, 1, len(t)))
-
-fig = plt.figure(figsize=(8, 6))
-ax  = fig.add_subplot(111, projection='3d')
-ax.scatter(x, y, z, c=colors, s=2, alpha=0.8)
-ax.set_title(f"3D Lissajous  a={a:.1f}, b={b:.1f}, c={c:.1f}")
-plt.tight_layout()
-plt.show()
-```
-
-Animate `a` from 1 to 6, sweeping through different curve topologies:
+[examples/lissajous_3d_static.py](examples/lissajous_3d_static.py)
 
 ```bash
-python mpl_animator.py examples/lissajous_3d_static.py --var a --range "1,6" --frames 80 --fps 20
-python lissajous_3d_static_animated.py
+mpl-animator examples/lissajous_3d_static.py --var a --range "1,6" --frames 80 --fps 20
 ```
-
-For 3D plots the animator calls `fig.clear()` and recreates the axes each frame (required to preserve the `projection='3d'` state), then re-runs all drawing commands with the new value of `a`.
 
 ![lissajous animation](https://raw.githubusercontent.com/BasemRajjoub/mpl_animator/main/examples/lissajous_3d_static_animated.gif)
 
 ---
 
----
+### Cinematic orbit (3 variables)
 
-### Example 3 - Cinematic 3D orbit (multi-variable)
-
-`orbit_static.py` draws a torus knot for fixed camera position and object rotation:
-
-```python
-# orbit_static.py
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D  # noqa: F401
-
-azim = 45.0   # camera azimuth in degrees      <- animated
-spin = 0.0    # object self-rotation (radians) <- animated
-elev = 20.0   # camera elevation in degrees    <- animated
-
-p, q = 2, 3
-N    = 300
-phi  = np.linspace(0, 2 * np.pi, N)
-R, r_tube = 1.0, 0.25
-tube_u    = np.linspace(0, 2 * np.pi, 20)
-
-cx = (R + r_tube * np.cos(q * phi)) * np.cos(p * phi)
-cy = (R + r_tube * np.cos(q * phi)) * np.sin(p * phi)
-cz = r_tube * np.sin(q * phi)
-
-cx_rot = cx * np.cos(spin) - cy * np.sin(spin)
-cy_rot = cx * np.sin(spin) + cy * np.cos(spin)
-cz_rot = cz
-
-dx = np.gradient(cx_rot); dy = np.gradient(cy_rot); dz = np.gradient(cz_rot)
-tang_len = np.sqrt(dx**2 + dy**2 + dz**2) + 1e-12
-tx, ty, tz = dx / tang_len, dy / tang_len, dz / tang_len
-ux = ty * 0 - tz * 1; uy = tz * 0 - tx * 0; uz = tx * 1 - ty * 0
-n_len = np.sqrt(ux**2 + uy**2 + uz**2) + 1e-12
-nx, ny, nz = ux / n_len, uy / n_len, uz / n_len
-bx = ty * nz - tz * ny; by = tz * nx - tx * nz; bz = tx * ny - ty * nx
-
-tube_r = 0.12
-xs = cx_rot[:, None] + tube_r * (nx[:, None] * np.cos(tube_u) + bx[:, None] * np.sin(tube_u))
-ys = cy_rot[:, None] + tube_r * (ny[:, None] * np.cos(tube_u) + by[:, None] * np.sin(tube_u))
-zs = cz_rot[:, None] + tube_r * (nz[:, None] * np.cos(tube_u) + bz[:, None] * np.sin(tube_u))
-
-fig = plt.figure(figsize=(7, 7))
-ax  = fig.add_subplot(111, projection='3d')
-ax.plot_surface(xs, ys, zs, cmap='plasma', alpha=0.92, linewidth=0)
-ax.view_init(elev=elev, azim=azim)
-ax.set_title(f'azim={azim:.0f}°  elev={elev:.0f}°  spin={np.degrees(spin):.0f}°')
-plt.tight_layout()
-plt.show()
-```
-
-All three variables sweep simultaneously from the same frame clock — the camera orbits a full 360°, the object spins one full turn, and the camera gently cranes upward. `--ping-pong` plays the sequence forward then reversed for a seamless loop:
+[examples/orbit_static.py](examples/orbit_static.py) — camera orbits 360°, object spins a full turn, camera cranes up:
 
 ```bash
-python mpl_animator.py examples/orbit_static.py \
+mpl-animator examples/orbit_static.py \
     --var azim spin elev \
     --range "0,360" "0,6.28318" "20,40" \
     --frames 90 --fps 25 --dpi 120 --ping-pong
-python orbit_static_animated.py --sequential
 ```
-
-The animator identifies that `cx_rot`, `cy_rot`, and the tube surface `xs`/`ys`/`zs` all depend on `spin`, and that `ax.view_init` depends on `azim` and `elev` — all three dependency chains are tracked and placed in `update()` automatically.
 
 ![orbit animation](https://raw.githubusercontent.com/BasemRajjoub/mpl_animator/main/examples/orbit_static_animated.gif)
 
 ---
 
-## How it works
-
-1. Parses your script's AST to find which variables depend on the animated one
-2. Splits code into **static** (run once), **dynamic** (recalculated per frame), and **plot** (redrawn per frame)
-3. Generates a new script with sequential (PNG+stitch) and parallel (`multiprocessing`) renderers — each frame is a standalone PNG, stitched into GIF or MP4 at the end
-
-## Library usage
+## Library API
 
 ```python
 from mpl_animator import animate
 
 src = open("my_plot.py").read()
 
-# Single variable
-animated_code = animate(src, var="t", range_str="0,6.28", frames=60, fps=25)
-open("my_plot_animated.py", "w").write(animated_code)
+# Returns the generated animation script as a string
+code = animate(src, var="t", range_str="0,6.28", frames=60, fps=25)
 
-# Multiple variables — pass lists of equal length
-animated_code = animate(
-    src,
-    var=["azim", "spin", "elev"],
-    range_str=["0,360", "0,6.28", "20,40"],
-    frames=90, fps=25, ping_pong=True,
-)
+# Multi-variable
+code = animate(src, var=["azim", "spin"], range_str=["0,360", "0,6.28"], frames=90, ping_pong=True)
 
-# Export as MP4
-animated_code = animate(src, var="t", range_str="0,6.28", fmt="mp4")
-
-# Explicit values: animate over a specific set of values (frame count is inferred)
-animated_code = animate(src, var="n", values="5,10,50,200,1000")
-animated_code = animate(src, var="n", values=[5, 10, 50, 200, 1000])
-
-# Multi-variable explicit values
-animated_code = animate(src, var=["a", "b"], values=["1,2,5,10", "0.1,0.5,1.0,2.0"])
-
-# Ping-pong loop (seamless forward+reverse)
-animated_code = animate(src, var="t", range_str="0,1", ping_pong=True, loop=0)
+# Explicit values
+code = animate(src, var="n", values="5,10,50,200,1000")
 ```
 
-## Supported plot types
+## Options
 
-2D (plot, scatter, bar, hist, contour, imshow, ...), 3D (plot_surface, scatter3D, ...), polar, and anything else matplotlib draws.
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--var` | `t` | Variable(s) to animate |
+| `--range` | `0,1` | `start,end` per variable (math expressions ok) |
+| `--values` | — | Explicit values instead of a range |
+| `--frames` | 120 | Frame count |
+| `--fps` | 25 | Frames per second |
+| `--format` | `gif` | `gif` or `mp4` |
+| `--out` | auto | Output filename |
+| `--dpi` | 100 | Render DPI |
+| `--workers` | auto | Parallel workers (0 = cpu_count) |
+| `--loop` | 0 | GIF loops (0 = forever) |
+| `--ping-pong` | off | Play forward then reversed |
+| `--reverse` | off | Sweep end → start |
+| `--save-script` | off | Save the generated `.py` alongside the GIF |
 
 ## Tests
 
-The animator has been extensively tested against **all 510 official matplotlib gallery examples**. Of those, 271 are directly animatable (the rest are interactive widgets, event-driven demos, or scripts with no scalar variable to sweep) — and the animator produces valid, runnable Python for every single one.
-
 ```bash
-pytest tests/test_animator.py -v          # unit + integration tests (208 tests)
-pytest tests/test_gallery.py -v           # all matplotlib gallery examples (276 tests)
-pytest tests/ -v                          # everything (484 tests)
-pytest tests/ -v -m slow                  # slow tests that generate actual GIFs/MP4s
+pytest tests/test_animator.py   # 208 unit + integration tests
+pytest tests/test_gallery.py    # 276 tests across all matplotlib gallery examples
+pytest tests/ -m slow           # tests that generate actual GIF/MP4 files
 ```
 
-**Test coverage:**
-- 208 unit and integration tests covering AST parsing, dependency tracking, code generation, validation, multi-variable animation, explicit value lists, augmented assignment scoping, seaborn/pandas draw recognition, per-frame error handling, 53 edge-case fixtures, and 10 real-world scripts
-- 276 parametrized tests — one per animatable official matplotlib gallery example, spanning every plot category: line, bar, scatter, histogram, contour, heatmap, 3D surface, 3D wireframe, polar, pie, errorbar, fill_between, quiver, stem, and more
+Validated against all 510 official matplotlib gallery examples.
 
 ## Known limitations
 
-- **Stateful / accumulating scripts** - scripts that build up results iteratively (e.g. appending to a list across a loop) re-run from scratch each frame, which is correct for pure functional plots but may produce unexpected results for accumulating ones
-- **`if __name__ == "__main__":` guards** - code inside a `__name__` guard is treated as a single block; if the animated variable is assigned inside the guard, the animator may not partition it correctly
-- **Multiprocessing via `exec()`** - when running the generated code via `exec()` rather than as a standalone file, the parallel renderer can't pickle the worker function and falls back to sequential mode automatically
-- **Variable domain safety** - the animator has no awareness of valid domains for the animated variable; sweeping into invalid ranges (e.g. negative values for a count parameter) may cause per-frame errors (which are now skipped gracefully)
+- **Accumulating scripts** — re-runs from scratch each frame; not suitable for scripts that build state iteratively
+- **`__main__` guards** — variables assigned inside `if __name__ == "__main__":` may not partition correctly
+- **Variable domain safety** — no awareness of valid domains; bad ranges cause per-frame errors (skipped gracefully)
 
 ---
 
-Author: [Basem Rajjoub](https://basemrajjoub.com)
-
-Built with the assistance of [Claude Code](https://claude.ai/claude-code)
+Author: [Basem Rajjoub](https://basemrajjoub.com) · Built with [Claude Code](https://claude.ai/claude-code)

@@ -1300,3 +1300,148 @@ class TestSlowExecution:
         from PIL import Image
         assert Image.open(tmp_path / "pp.gif").n_frames > \
                Image.open(tmp_path / "normal.gif").n_frames
+
+
+# ---------------------------------------------------------------------------
+# CLI main() tests
+# ---------------------------------------------------------------------------
+
+class TestCLIMain:
+    """Tests for the mpl-animator CLI entry point (main())."""
+
+    SIMPLE_SRC = textwrap.dedent("""\
+        import numpy as np
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+        t = 0.0
+        x = np.linspace(0, 1, 10)
+        y = np.sin(2 * np.pi * t * x)
+        fig, ax = plt.subplots()
+        ax.plot(x, y)
+        plt.show()
+    """)
+
+    def _write_script(self, tmp_path, name="simple.py"):
+        p = tmp_path / name
+        p.write_text(self.SIMPLE_SRC, encoding="utf-8")
+        return p
+
+    def test_default_runs_subprocess_no_py_file(self, tmp_path, monkeypatch):
+        """Default: subprocess is called, no *_animated.py written."""
+        from unittest.mock import patch, MagicMock
+        from mpl_animator import main
+
+        script = self._write_script(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        with patch("sys.argv", ["mpl-animator", str(script),
+                                "--var", "t", "--range", "0,1", "--frames", "3"]):
+            with patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run:
+                main()
+
+        mock_run.assert_called_once()
+        assert not (tmp_path / "simple_animated.py").exists()
+
+    def test_save_script_writes_py_file(self, tmp_path, monkeypatch):
+        """--save-script: .py file written alongside the GIF."""
+        from unittest.mock import patch, MagicMock
+        from mpl_animator import main
+
+        script = self._write_script(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        with patch("sys.argv", ["mpl-animator", str(script),
+                                "--var", "t", "--range", "0,1", "--frames", "3",
+                                "--save-script"]):
+            with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+                main()
+
+        py_file = tmp_path / "simple_animated.py"
+        assert py_file.exists()
+        assert py_file.stat().st_size > 0
+
+    def test_subprocess_called_with_check_true(self, tmp_path, monkeypatch):
+        """subprocess.run must be called with check=True."""
+        from unittest.mock import patch, MagicMock, call
+        from mpl_animator import main
+
+        script = self._write_script(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        with patch("sys.argv", ["mpl-animator", str(script),
+                                "--var", "t", "--range", "0,1", "--frames", "3"]):
+            with patch("subprocess.run", return_value=MagicMock(returncode=0)) as mock_run:
+                main()
+
+        _, kwargs = mock_run.call_args
+        assert kwargs.get("check") is True
+
+    def test_temp_file_cleaned_up_on_success(self, tmp_path, monkeypatch):
+        """Temp .py file is deleted after successful run."""
+        import glob
+        from unittest.mock import patch, MagicMock
+        from mpl_animator import main
+
+        script = self._write_script(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        created_tmp = []
+
+        original_unlink = os.unlink
+
+        def track_unlink(path):
+            created_tmp.append(path)
+            original_unlink(path)
+
+        with patch("sys.argv", ["mpl-animator", str(script),
+                                "--var", "t", "--range", "0,1", "--frames", "3"]):
+            with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+                with patch("os.unlink", side_effect=track_unlink):
+                    main()
+
+        assert len(created_tmp) == 1
+        assert not os.path.exists(created_tmp[0])
+
+    def test_temp_file_cleaned_up_on_failure(self, tmp_path, monkeypatch):
+        """Temp .py file is deleted even when subprocess raises CalledProcessError."""
+        from unittest.mock import patch
+        from subprocess import CalledProcessError
+        from mpl_animator import main
+
+        script = self._write_script(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        deleted = []
+        original_unlink = os.unlink
+
+        def track_unlink(path):
+            deleted.append(path)
+            original_unlink(path)
+
+        with patch("sys.argv", ["mpl-animator", str(script),
+                                "--var", "t", "--range", "0,1", "--frames", "3"]):
+            with patch("subprocess.run", side_effect=CalledProcessError(1, "python")):
+                with patch("os.unlink", side_effect=track_unlink):
+                    with pytest.raises(CalledProcessError):
+                        main()
+
+        assert len(deleted) == 1
+        assert not os.path.exists(deleted[0])
+
+    def test_out_flag_used_in_display(self, tmp_path, monkeypatch, capsys):
+        """--out value appears in the printed output path."""
+        from unittest.mock import patch, MagicMock
+        from mpl_animator import main
+
+        script = self._write_script(tmp_path)
+        monkeypatch.chdir(tmp_path)
+
+        with patch("sys.argv", ["mpl-animator", str(script),
+                                "--var", "t", "--range", "0,1", "--frames", "3",
+                                "--out", "my_anim.gif"]):
+            with patch("subprocess.run", return_value=MagicMock(returncode=0)):
+                main()
+
+        captured = capsys.readouterr()
+        assert "my_anim.gif" in captured.out
